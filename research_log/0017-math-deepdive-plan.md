@@ -82,7 +82,22 @@ eval data; we note it, and prioritize true extraction quality for the math goal 
 detector is safe for other domains regardless).
 
 ## Next (execute)
+_(superseded by the result below)_
 
 - Implement rule (1), measure on `math` (train+dev) and confirm `general/code/science`
   unchanged (expected, given 0.07% fire). Read each math entry's diff after, iterate to
   near-perfect on the ones that are content-selection-fixable.
+
+## RESULT — LaTeX-keep rule tested, NEGATIVE (reverted)
+
+Implemented the force-keep-LaTeX-paragraph rule in `apply()` and tested on the fast model:
+- **general/code/science/table: unchanged** (0.07% fire confirmed safe). ✓
+- **math/dev: 0.826 → 0.753 (HURT).** Force-keeping *all* LaTeX paragraphs over-extracts:
+  only ~10/19 math/dev LaTeX paragraphs are in the gold, so the rule keeps boilerplate-ish
+  math the teacher dropped. **Reverted.**
+
+Lesson: even math is **context-dependent, not rule-separable** (consistent with 0015) —
+a blanket "keep LaTeX" hurts. The math win must come from the **context-aware fastText
+model** (which already lifted science/table), not a hard rule. The math-image *detector*
+remains valid for a future policy that arbitrates per-equation (display vs inline), but a
+blanket keep is wrong.
