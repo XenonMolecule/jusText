@@ -104,13 +104,22 @@ def main():
                  for lo in [i / 10 for i in range(10)]],
     }
 
+    def embed(obj):
+        # Safe inside a <script> tag: neutralise </script> & HTML chars so the tag
+        # can't close early. The \uXXXX forms are valid JSON -> identical data.
+        s = json.dumps(obj, ensure_ascii=False)
+        s = s.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+        for ch in ("\u2028", "\u2029"):
+            s = s.replace(ch, "\\u%04x" % ord(ch))
+        return s
+
     out = args.out or os.path.join(_HERE, os.pardir, "runs", run.tag, run.dataset,
                                    f"{run.split}.report.html")
     out = os.path.abspath(out)
     with open(out, "w", encoding="utf-8") as fh:
         fh.write(_HTML.replace("/*DATA*/",
-                               "const SUMMARY=" + json.dumps(summary) +
-                               ";\nconst DOCS=" + json.dumps(docs) + ";"))
+                               "const SUMMARY=" + embed(summary) +
+                               ";\nconst DOCS=" + embed(docs) + ";"))
     print(f"wrote {out}  ({os.path.getsize(out)/1e6:.1f} MB, {len(docs)} docs)")
     print(f"open it:  open {out}")
 
