@@ -46,7 +46,7 @@ def _extract(args):
     try:
         paragraphs = justext.justext(html, _STOP)
     except Exception:
-        return [], []
+        return [], [], []
     rows, kept = paragraph_features(paragraphs, _STOP)
     # Label methods (research log 0012):
     #  - "overlap": >= _OVERLAP of paragraph tokens present in gold (best for the
@@ -65,7 +65,7 @@ def _extract(args):
         for p in kept:
             toks = tokenize(p.text)
             labels.append(1 if toks and sum(t in gset for t in toks) / len(toks) >= _OVERLAP else 0)
-    return rows, labels
+    return rows, labels, [p.text for p in kept]
 
 
 def load_split(dataset, split):
@@ -74,9 +74,10 @@ def load_split(dataset, split):
         recs = [json.loads(l) for l in fh if l.strip()]
     with ProcessPoolExecutor(max_workers=os.cpu_count()) as ex:
         per = list(ex.map(_extract, [(r["html"], r["final_output"]) for r in recs], chunksize=16))
-    X = [row for rows, _ in per for row in rows]
-    y = [lab for _, labs in per for lab in labs]
-    return X, y
+    X = [row for rows, _, _ in per for row in rows]
+    y = [lab for _, labs, _ in per for lab in labs]
+    texts = [t for _, _, ts in per for t in ts]
+    return X, y, texts
 
 
 def main():
@@ -91,6 +92,8 @@ def main():
     ap.add_argument("--label-overlap", type=float, default=0.6)
     ap.add_argument("--fuzzy", type=int, default=85,
                     help="rapidfuzz partial_ratio threshold for fuzzy label")
+    ap.add_argument("--stack", action="store_true",
+                    help="also train a char-ngram text model and stack its prob into the RF")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
     _FUZZY = args.fuzzy; _LABEL = args.label; _OVERLAP = args.label_overlap
@@ -99,11 +102,23 @@ def main():
     import joblib
     from sklearn.ensemble import RandomForestClassifier
 
-    print(f"extracting {args.dataset}/train ...", flush=True)
+    print(f"extracting {args.dataset}/train (label={args.label}, stack={args.stack}) ...", flush=True)
     t0 = perf_counter()
-    X, y = load_split(args.dataset, "train")
+    X, y, texts = load_split(args.dataset, "train")
     X = np.asarray(X); y = np.asarray(y)
     print(f"  {len(y)} paragraphs, positive rate {y.mean():.3f}, {perf_counter()-t0:.1f}s")
+
+    text_vectorizer = text_model = None
+    if args.stack:
+        from sklearn.feature_extraction.text import HashingVectorizer
+        from sklearn.linear_model import SGDClassifier
+        text_vectorizer = HashingVectorizer(analyzer="char_wb", ngram_range=(3, 5),
+                                            n_features=2 ** 19, alternate_sign=False, norm="l2")
+        H = text_vectorizer.transform(texts)
+        text_model = SGDClassifier(loss="log_loss", alpha=3e-6, max_iter=30,
+                                   class_weight="balanced", random_state=0).fit(H, y)
+        X = np.hstack([X, text_model.predict_proba(H)[:, 1].reshape(-1, 1)])
+        print(f"  trained text model; stacked feature added", flush=True)
 
     clf = RandomForestClassifier(
         n_estimators=args.trees, max_depth=args.depth, min_samples_leaf=args.min_leaf,
@@ -114,6 +129,7 @@ def main():
     os.makedirs(MODELS_DIR, exist_ok=True)
     out = args.out or os.path.join(MODELS_DIR, f"{args.dataset}.joblib")
     joblib.dump({"model": clf, "threshold": 0.5,
+                 "text_vectorizer": text_vectorizer, "text_model": text_model,
                  "config": {"trees": args.trees, "depth": args.depth,
                             "min_leaf": args.min_leaf, "fuzzy": args.fuzzy}},
                 out, compress=3)

@@ -102,16 +102,23 @@ def paragraph_features(paragraphs, stoplist):
 class ParagraphClassifier:
     """Wraps a trained scikit-learn model and applies it to jusText paragraphs."""
 
-    def __init__(self, model, threshold=0.5):
+    def __init__(self, model, threshold=0.5, text_vectorizer=None, text_model=None):
         self.model = model
         self.threshold = threshold
+        # Optional stacked text model (research log 0013): a char-ngram model over the
+        # paragraph text whose keep-probability is appended as a feature to the struct
+        # model. Captures "does this read like kept content" -- the signal the fuzzy
+        # label encodes that structural features miss.
+        self.text_vectorizer = text_vectorizer
+        self.text_model = text_model
 
     @classmethod
     def load(cls, path, threshold=0.5):
         import joblib  # lazy: only needed when a learned model is used
         payload = joblib.load(path)
         if isinstance(payload, dict):
-            return cls(payload["model"], payload.get("threshold", threshold))
+            return cls(payload["model"], payload.get("threshold", threshold),
+                       payload.get("text_vectorizer"), payload.get("text_model"))
         return cls(payload, threshold)
 
     def predict_keep(self, paragraphs, stoplist):
@@ -120,7 +127,12 @@ class ParagraphClassifier:
         rows, kept = paragraph_features(paragraphs, stoplist)
         if not rows:
             return {}
-        proba = self.model.predict_proba(np.asarray(rows))[:, 1]
+        X = np.asarray(rows)
+        if self.text_model is not None:
+            tp = self.text_model.predict_proba(
+                self.text_vectorizer.transform([p.text for p in kept]))[:, 1]
+            X = np.hstack([X, tp.reshape(-1, 1)])
+        proba = self.model.predict_proba(X)[:, 1]
         return {id(p): bool(pp >= self.threshold) for p, pp in zip(kept, proba)}
 
     def apply(self, paragraphs, stoplist):

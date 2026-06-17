@@ -2,7 +2,7 @@
 
 - **Date:** 2026-06-17
 - **Tag:** `0012-pre-rule` (vs `0009-row-merge`)
-- **Commit:** _(backfilled next cycle)_
+- **Commit:** `526b88d`
 - **Status:** landed — shipped the `<pre>` rule; documented observations + fuzzy label.
 
 Spent this cycle **reading actual extractions vs gold** (diff tools) and the HTML, per

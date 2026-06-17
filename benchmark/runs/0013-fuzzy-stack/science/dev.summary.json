@@ -1,0 +1,50 @@
+{
+  "tag": "0013-fuzzy-stack",
+  "dataset": "science",
+  "split": "dev",
+  "n_docs": 3,
+  "config": {
+    "justext_version": "3.0.2",
+    "language": "English",
+    "paragraph_separator": "\n\n",
+    "workers": 8,
+    "model": "benchmark/eval/models/general.joblib"
+  },
+  "timing": {
+    "run_seconds": 1.62958625,
+    "score_seconds": 0.016164874999999856,
+    "run_ms_per_doc": 543.1954166666667
+  },
+  "metrics": {
+    "rougeL_f": {
+      "mean": 0.93602519936592,
+      "median": 0.9539823008849557,
+      "min": 0.8908803373748023,
+      "max": 0.963212959838002
+    },
+    "rougeL_p": {
+      "mean": 0.8967659050889024,
+      "median": 0.9341421143847487,
+      "min": 0.8086124401913876,
+      "max": 0.9475431606905711
+    },
+    "rougeL_r": {
+      "mean": 0.9819591093053393,
+      "median": 0.9794097460535347,
+      "min": 0.9746835443037974,
+      "max": 0.9917840375586855
+    },
+    "lev_distance": {
+      "mean": 721.3333333333334,
+      "median": 568,
+      "min": 252,
+      "max": 1344
+    },
+    "lev_similarity": {
+      "mean": 0.8850629756982226,
+      "median": 0.9355168884339816,
+      "min": 0.7809647979139505,
+      "max": 0.9387072407467357
+    }
+  }
+}
