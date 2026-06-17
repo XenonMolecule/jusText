@@ -1,0 +1,49 @@
+{
+  "tag": "0002-relax-thresholds",
+  "dataset": "general",
+  "split": "dev",
+  "n_docs": 1000,
+  "config": {
+    "justext_version": "3.0.2",
+    "language": "English",
+    "paragraph_separator": "\n\n",
+    "workers": 8
+  },
+  "timing": {
+    "run_seconds": 3.5970112089999997,
+    "score_seconds": 4.208606291,
+    "run_ms_per_doc": 3.5970112089999997
+  },
+  "metrics": {
+    "rougeL_f": {
+      "mean": 0.8092579564647223,
+      "median": 0.892605021128511,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "rougeL_p": {
+      "mean": 0.807410949320189,
+      "median": 0.9052576864919355,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "rougeL_r": {
+      "mean": 0.8570253222823211,
+      "median": 0.9476643872626656,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "lev_distance": {
+      "mean": 2061.324,
+      "median": 744.0,
+      "min": 0,
+      "max": 102168
+    },
+    "lev_similarity": {
+      "mean": 0.7247943573663858,
+      "median": 0.7949992069939389,
+      "min": 0.0,
+      "max": 1.0
+    }
+  }
+}

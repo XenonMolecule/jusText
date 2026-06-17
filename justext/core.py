@@ -25,11 +25,15 @@ from ._compat import unicode, ignored
 from .utils import is_blank
 
 
+# Classification thresholds. Retuned (research log 0002) against the LLM-distilled
+# extraction benchmark; the original CleanEval-era values were 70/200/0.30/0.32 and
+# dropped too much content (whole clean English docs collapsed to boilerplate because
+# no paragraph cleared the strict 200-char "good" bar).
 MAX_LINK_DENSITY_DEFAULT = 0.2
-LENGTH_LOW_DEFAULT = 70
-LENGTH_HIGH_DEFAULT = 200
-STOPWORDS_LOW_DEFAULT = 0.30
-STOPWORDS_HIGH_DEFAULT = 0.32
+LENGTH_LOW_DEFAULT = 40
+LENGTH_HIGH_DEFAULT = 60
+STOPWORDS_LOW_DEFAULT = 0.15
+STOPWORDS_HIGH_DEFAULT = 0.20
 NO_HEADINGS_DEFAULT = False
 # Short and near-good headings within MAX_HEADING_DISTANCE characters before
 # a good paragraph are classified as good unless --no-headings is specified.

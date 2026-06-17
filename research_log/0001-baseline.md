@@ -2,6 +2,7 @@
 
 - **Date:** 2026-06-16
 - **Tag:** `v3.0.2-9fb3340`
+- **Commit:** `b2ee3fa`
 - **Status:** landed (reference point)
 
 Stock jusText against the LLM-distilled gold (`final_output`), no changes. This is
