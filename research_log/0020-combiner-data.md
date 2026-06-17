@@ -29,3 +29,12 @@ distribution-sensitive.
   Lev on general is the practical ceiling** of this fast paragraph-selection pipeline.
 - The only remaining paths to 0.90/0.85: (a) more **in-distribution** fastText/training
   data, (b) a heavier content model (beyond fastText) — both require the user.
+
+## Follow-up: fastText augmented with in-distribution general/train — also NEGATIVE
+
+Appended the 925k general/train paragraphs to the big_train fastText training and
+retrained: text-only unchanged (0.829 vs 0.828), but the **stack dropped to 0.859 vs
+0.870** (no-pre). Adding the in-distribution data perturbed the fastText probs in a way
+the combiner liked less. Big_train-only fastText stays best. Net: the data-augmentation
+angle (both combiner-side and fastText-side) does **not** help — confirms 0.880/0.814 is
+the ceiling with the current data; more *volume* of similar data won't move it.
