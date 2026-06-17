@@ -2,7 +2,7 @@
 
 - **Date:** 2026-06-17
 - **Tag:** (analysis on `0009-row-merge`)
-- **Commit:** _(backfilled next cycle)_
+- **Commit:** `1b1196b`
 - **Status:** landed — all negative; documents the search boundary.
 
 After the 0009 segmentation win (oracle 0.893→0.902), swept the obvious follow-ups to
