@@ -162,6 +162,7 @@ class ParagraphMaker(ContentHandler):
         self.paragraph = None
         self.link = False
         self.br = False
+        self.pre = 0  # depth inside <pre>/<textarea>: preserve whitespace verbatim (0021)
         self._start_new_pragraph()
 
     def _start_new_pragraph(self):
@@ -181,6 +182,10 @@ class ParagraphMaker(ContentHandler):
                 # paragraph
                 self.paragraph.tags_count -= 1
             self._start_new_pragraph()
+            # <pre>/<textarea> content is verbatim: keep indentation & line breaks (0021)
+            if name in ("pre", "textarea"):
+                self.pre += 1
+                self.paragraph.verbatim = True
         else:
             # Cell/item tags don't break the paragraph (0009) but separate their
             # text with a space so a row reads "Bedrooms: 4", not "Bedrooms4".
@@ -197,6 +202,8 @@ class ParagraphMaker(ContentHandler):
         name = name[1]
         self.path.pop()
 
+        if name in ("pre", "textarea") and self.pre > 0:
+            self.pre -= 1
         if name in PARAGRAPH_TAGS:
             self._start_new_pragraph()
         elif name in SEPARATOR_TAGS:
@@ -208,10 +215,15 @@ class ParagraphMaker(ContentHandler):
         self._start_new_pragraph()
 
     def characters(self, content):
-        if is_blank(content):
-            return
-
-        text = self.paragraph.append_text(content)
+        # Inside <pre>/<textarea> keep whitespace verbatim (don't skip blank, don't
+        # normalize) so code indentation and line breaks survive (research log 0021).
+        if self.pre > 0:
+            self.paragraph.verbatim = True
+            text = self.paragraph.append_text(content, normalize=False)
+        else:
+            if is_blank(content):
+                return
+            text = self.paragraph.append_text(content)
 
         if self.link:
             self.paragraph.chars_count_in_links += len(text)

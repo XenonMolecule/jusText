@@ -1,0 +1,50 @@
+{
+  "tag": "0021-pre-ws",
+  "dataset": "code",
+  "split": "dev",
+  "n_docs": 11,
+  "config": {
+    "justext_version": "3.0.2",
+    "language": "English",
+    "paragraph_separator": "\n\n",
+    "workers": 4,
+    "model": "benchmark/eval/models/general-fast.joblib"
+  },
+  "timing": {
+    "run_seconds": 3.3101309169999995,
+    "score_seconds": 0.22425104199999968,
+    "run_ms_per_doc": 300.9209924545454
+  },
+  "metrics": {
+    "rougeL_f": {
+      "mean": 0.8356915681008161,
+      "median": 0.8775510204081634,
+      "min": 0.5051804215791353,
+      "max": 0.984841075794621
+    },
+    "rougeL_p": {
+      "mean": 0.7858425784985996,
+      "median": 0.8026981450252951,
+      "min": 0.39453125,
+      "max": 0.976721629485936
+    },
+    "rougeL_r": {
+      "mean": 0.9068608455637857,
+      "median": 0.9419275123558485,
+      "min": 0.702085402184707,
+      "max": 1.0
+    },
+    "lev_distance": {
+      "mean": 3015.909090909091,
+      "median": 1914,
+      "min": 199,
+      "max": 8285
+    },
+    "lev_similarity": {
+      "mean": 0.730152156793961,
+      "median": 0.7351465212812094,
+      "min": 0.37630097253028494,
+      "max": 0.968828320802005
+    }
+  }
+}

@@ -20,6 +20,9 @@ class Paragraph(object):
         self.chars_count_in_links = 0
         self.tags_count = 0
         self.class_type = ""  # short | neargood | good | bad
+        # Verbatim paragraphs (inside <pre>/<code>) keep their whitespace -- indentation
+        # and line breaks are significant for code/ASCII content (research log 0021).
+        self.verbatim = False
 
     @property
     def is_heading(self):
@@ -32,6 +35,9 @@ class Paragraph(object):
     @property
     def text(self):
         text = "".join(self.text_nodes)
+        if self.verbatim:
+            # preserve indentation/newlines; only trim leading/trailing blank lines
+            return text.strip("\n").rstrip()
         return normalize_whitespace(text.strip())
 
     def __len__(self):
@@ -44,8 +50,9 @@ class Paragraph(object):
     def contains_text(self):
         return bool(self.text_nodes)
 
-    def append_text(self, text):
-        text = normalize_whitespace(text)
+    def append_text(self, text, normalize=True):
+        if normalize:
+            text = normalize_whitespace(text)
         self.text_nodes.append(text)
         return text
 
