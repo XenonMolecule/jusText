@@ -34,6 +34,11 @@ setup(
         'lxml[html_clean] >= 4.4.2',
         'backports.functools-lru-cache; python_version < "3.2"'
     ],
+    extras_require={
+        # Optional input mojibake repair (justext(..., fix_encoding=True), on by default).
+        # Gracefully no-ops if absent, so it stays optional.
+        "encoding": ["ftfy >= 6.0"],
+    },
     tests_require=[
         "pytest",
         "pytest-cov",

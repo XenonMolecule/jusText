@@ -83,3 +83,5 @@ table/dev: 0.0 → **0.449** (0009).
 - [0017 — math deep-dive](0017-math-deepdive-plan.md) — LaTeX-keep NEGATIVE; math-image detector; gold drops image-math
 - [0018 — paragraph dedup](0018-dedup.md) — general 0.876/0.808 (+0.006/+0.007, additive)
 - [0019 — neighbour fastText-prob](0019-neighbor-ftprob.md) — **BEST: general 0.880/0.814** (boundary signal)
+- [0021 — verbatim code indentation](0021-pre-whitespace.md) — preserve `<pre>`/`<textarea>` whitespace (quality)
+- [0022 — mojibake repair](0022-mojibake-repair.md) — signature-gated ftfy fix, quality win, zero regression

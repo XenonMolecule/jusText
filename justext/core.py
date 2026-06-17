@@ -58,6 +58,37 @@ DEFAULT_ENC_ERRORS = 'replace'
 CHARSET_META_TAG_PATTERN = re.compile(br"""<meta[^>]+charset=["']?([^'"/>\s]+)""", re.IGNORECASE)
 GOOD_OR_BAD = {'good', 'bad'}
 
+# Mojibake repair (research log 0022). Some source pages arrive already mis-decoded
+# (UTF-8 bytes read as Latin-1/CP1252, sometimes twice), so the input string contains
+# garbage like ``â€™`` / ``Ã¢â‚¬â„¢`` instead of ``’``. jusText would faithfully emit the
+# garbage. When ``fix_encoding`` is on we repair the input with ftfy -- but only when one
+# of these tell-tale signatures is present, so clean documents are byte-for-byte untouched
+# (no regression). Affects ~0.5% of general docs, 0% of the domain sets.
+MOJIBAKE_PATTERN = re.compile("Ã[ƒ‚©¨¶°¢]|â€|â‚¬|Ã¢|Â[«»\xa0]")
+_FTFY = None  # lazy ftfy module handle: None=unloaded, False=unavailable
+
+
+def repair_mojibake(html_text):
+    """Reverse double/single UTF-8<->CP1252 mojibake in *html_text* if detected.
+
+    No-op when no mojibake signature is present, when the input is not a unicode
+    string, or when ftfy is not installed (graceful degradation -- ftfy is an optional
+    dependency). Tags are ASCII so they pass through untouched; only mis-decoded text is
+    repaired.
+    """
+    global _FTFY
+    if not isinstance(html_text, unicode) or not MOJIBAKE_PATTERN.search(html_text):
+        return html_text
+    if _FTFY is None:
+        try:
+            import ftfy
+            _FTFY = ftfy
+        except ImportError:
+            _FTFY = False
+    if not _FTFY:
+        return html_text
+    return _FTFY.fix_encoding(html_text)
+
 
 class JustextError(Exception):
     "Base class for jusText exceptions."
@@ -407,7 +438,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         stopwords_high=STOPWORDS_HIGH_DEFAULT, max_link_density=MAX_LINK_DENSITY_DEFAULT,
         max_heading_distance=MAX_HEADING_DISTANCE_DEFAULT, no_headings=NO_HEADINGS_DEFAULT,
         encoding=None, default_encoding=DEFAULT_ENCODING,
-        enc_errors=DEFAULT_ENC_ERRORS, preprocessor=preprocessor, model=None):
+        enc_errors=DEFAULT_ENC_ERRORS, preprocessor=preprocessor, model=None,
+        fix_encoding=True):
     """
     Converts an HTML page into a list of classified paragraphs. Each paragraph
     is represented as instance of class ˙˙justext.paragraph.Paragraph˙˙.
@@ -415,7 +447,13 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
     If ``model`` (a ``justext.classifier.ParagraphClassifier``) is given, the learned
     classifier re-decides each paragraph's class after the heuristic pass, using the
     heuristic output as features (see research log 0003).
+
+    If ``fix_encoding`` is true (default) and the input shows a mojibake signature, the
+    text is repaired with ftfy before parsing (research log 0022); requires the optional
+    ``ftfy`` dependency and is a no-op without it or on clean input.
     """
+    if fix_encoding:
+        html_text = repair_mojibake(html_text)
     dom = html_to_dom(html_text, default_encoding, encoding, enc_errors)
     dom = preprocessor(dom)
 
