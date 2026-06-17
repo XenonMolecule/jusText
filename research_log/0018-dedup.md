@@ -42,3 +42,10 @@ any quote-heavy domain (forums, threads, comment sections).
 - Re-measure the shipped **fastText-stack + dedup** across all datasets (general 0.870 →
   expect ~0.876) once the 50k-struct job frees compute.
 - Consider a core-level dedup option (benefits the heuristic default too).
+
+## Dedup tuning (confirmed optimal)
+
+Tested more aggressive variants on general/dev: exact/ratio>=97 **0.855** (best) >
+ratio>=90 0.854 > containment 0.839. Lower thresholds / substring-containment
+**over-remove** distinct content (a short content line that's a substring of a longer
+one is not a duplicate). Current setting is the sweet spot.
