@@ -2,7 +2,7 @@
 
 - **Date:** 2026-06-17
 - **Tag:** `0007-content-features` (vs `0004-dom-features`)
-- **Commit:** _(backfilled next cycle)_
+- **Commit:** `eaa7880`
 - **Status:** landed — NEGATIVE (features reverted; plateau confirmed again)
 
 ## Hypothesis

@@ -1,0 +1,50 @@
+{
+  "tag": "0004-dom-features",
+  "dataset": "table",
+  "split": "train",
+  "n_docs": 6,
+  "config": {
+    "justext_version": "3.0.2",
+    "language": "English",
+    "paragraph_separator": "\n\n",
+    "workers": 8,
+    "model": "benchmark/eval/models/general.joblib"
+  },
+  "timing": {
+    "run_seconds": 1.381387959,
+    "score_seconds": 0.0026548749999999455,
+    "run_ms_per_doc": 230.2313265
+  },
+  "metrics": {
+    "rougeL_f": {
+      "mean": 0.11814471726361492,
+      "median": 0.029103576914636824,
+      "min": 0.0,
+      "max": 0.49206349206349204
+    },
+    "rougeL_p": {
+      "mean": 0.3779187682394938,
+      "median": 0.18817081525462434,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "rougeL_r": {
+      "mean": 0.08440051466219287,
+      "median": 0.015317185697808537,
+      "min": 0.0,
+      "max": 0.36363636363636365
+    },
+    "lev_distance": {
+      "mean": 3709.6666666666665,
+      "median": 2578.5,
+      "min": 1040,
+      "max": 10301
+    },
+    "lev_similarity": {
+      "mean": 0.08955653687720842,
+      "median": 0.051959971598441956,
+      "min": 0.0,
+      "max": 0.2324723247232472
+    }
+  }
+}

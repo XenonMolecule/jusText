@@ -11,9 +11,9 @@
     "model": "benchmark/eval/models/general.joblib"
   },
   "timing": {
-    "run_seconds": 1.130678958,
-    "score_seconds": 0.0008520419999999973,
-    "run_ms_per_doc": 565.339479
+    "run_seconds": 1.208702167,
+    "score_seconds": 0.0009370829999999497,
+    "run_ms_per_doc": 604.3510835
   },
   "metrics": {
     "rougeL_f": {

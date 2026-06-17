@@ -2,7 +2,7 @@
 
 - **Date:** 2026-06-17
 - **Tag:** (analysis, vs `0004-dom-features`)
-- **Commit:** _(backfilled next cycle)_
+- **Commit:** `add6c67`
 - **Status:** landed — marginal/negative; plateau holds. Nothing shipped.
 
 ## What we tried (per user: target code/math; bespoke rules OK; richer content features)

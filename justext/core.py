@@ -39,10 +39,19 @@ NO_HEADINGS_DEFAULT = False
 # a good paragraph are classified as good unless --no-headings is specified.
 MAX_HEADING_DISTANCE_DEFAULT = 200
 PARAGRAPH_TAGS = frozenset({
-    'body', 'blockquote', 'caption', 'center', 'col', 'colgroup', 'dd',
-    'div', 'dl', 'dt', 'fieldset', 'form', 'legend', 'optgroup', 'option',
-    'p', 'pre', 'table', 'td', 'textarea', 'tfoot', 'th', 'thead', 'tr',
-    'ul', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'body', 'blockquote', 'center', 'col', 'colgroup',
+    'div', 'dl', 'fieldset', 'form', 'legend', 'optgroup',
+    'p', 'pre', 'table', 'textarea', 'tfoot', 'thead', 'tr',
+    'ul', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+})
+# Cell/item-level tags. Research log 0009: the original jusText made each of these a
+# separate paragraph, which fragmented table rows and lists into per-cell/per-item
+# blocks the classifier then dropped piecemeal -- capping the oracle ceiling and
+# wrecking row formatting (Levenshtein). We instead keep them INSIDE their containing
+# row/list paragraph, separated by a space, so a <tr> becomes one row and a <ul> one
+# block. This raised the general oracle F1 0.893->0.902 and Lev 0.822->0.838.
+SEPARATOR_TAGS = frozenset({
+    'td', 'th', 'li', 'dd', 'dt', 'option', 'caption',
 })
 DEFAULT_ENCODING = 'utf8'
 DEFAULT_ENC_ERRORS = 'replace'
@@ -173,6 +182,10 @@ class ParagraphMaker(ContentHandler):
                 self.paragraph.tags_count -= 1
             self._start_new_pragraph()
         else:
+            # Cell/item tags don't break the paragraph (0009) but separate their
+            # text with a space so a row reads "Bedrooms: 4", not "Bedrooms4".
+            if name in SEPARATOR_TAGS:
+                self.paragraph.append_text(' ')
             self.br = bool(name == "br")
             if self.br:
                 self.paragraph.append_text(' ')
@@ -186,6 +199,8 @@ class ParagraphMaker(ContentHandler):
 
         if name in PARAGRAPH_TAGS:
             self._start_new_pragraph()
+        elif name in SEPARATOR_TAGS:
+            self.paragraph.append_text(' ')
         if name == 'a':
             self.link = False
 
