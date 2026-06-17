@@ -63,7 +63,8 @@ Net effect in one line.
 
 ## Index
 
-general/dev F1 progress: 0.762 (baseline) → 0.849 (0009) → **0.870** (0016 fastText-stack). Lev: 0.682 → **0.801**.
+general/dev F1: 0.762 (baseline) → 0.849 (0009) → 0.870 (0016 fastText) → **0.876** (0018 +dedup). Lev: 0.682 → **0.808**.
+**Current best (ftstack+dedup):** general dev 0.876/0.808, train 0.877/0.811 | code 0.837 | science 0.982 | table 0.507 | math 0.806. Target 0.90/0.85.
 table/dev: 0.0 → **0.449** (0009).
 
 - [0001 — Baseline (jusText v3.0.2)](0001-baseline.md) — general 0.762/0.682
@@ -78,4 +79,6 @@ table/dev: 0.0 → **0.449** (0009).
 - [0010 — Post-breakthrough sweep (negatives)](0010-post-breakthrough-sweep.md) — threshold/forms/language/separator not levers
 - [0011–0013 — text-stack experiments](0013-fuzzy-text-stack.md) — fuzzy label (oracle 0.944), sklearn stack
 - [0014–0015 — ceiling + failure deep-dive II](0015-failure-deepdive-2.md) — precision leak is context-dependent
-- [0016 — fastText-on-100k stack](0016-fasttext-100k-stack.md) — **BEST: general 0.870/0.801**, +data breakthrough
+- [0016 — fastText-on-100k stack](0016-fasttext-100k-stack.md) — general 0.870/0.801, +data breakthrough
+- [0017 — math deep-dive](0017-math-deepdive-plan.md) — LaTeX-keep NEGATIVE; math-image detector; gold drops image-math
+- [0018 — paragraph dedup](0018-dedup.md) — **BEST: general 0.876/0.808** (+0.006/+0.007, additive)

@@ -1,0 +1,50 @@
+{
+  "tag": "0018-ftstack-dedup",
+  "dataset": "general",
+  "split": "train",
+  "n_docs": 10000,
+  "config": {
+    "justext_version": "3.0.2",
+    "language": "English",
+    "paragraph_separator": "\n\n",
+    "workers": 3,
+    "model": "benchmark/eval/models/general-ftstack.joblib"
+  },
+  "timing": {
+    "run_seconds": 150.548718167,
+    "score_seconds": 41.00485037500002,
+    "run_ms_per_doc": 15.054871816700002
+  },
+  "metrics": {
+    "rougeL_f": {
+      "mean": 0.8769735355341417,
+      "median": 0.9496252862613281,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "rougeL_p": {
+      "mean": 0.8551846067382226,
+      "median": 0.9459459459459459,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "rougeL_r": {
+      "mean": 0.9394388141906522,
+      "median": 0.9841269841269841,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "lev_distance": {
+      "mean": 1689.092,
+      "median": 400.0,
+      "min": 0,
+      "max": 112698
+    },
+    "lev_similarity": {
+      "mean": 0.8105873065018196,
+      "median": 0.8970164196224467,
+      "min": 0.0,
+      "max": 1.0
+    }
+  }
+}
