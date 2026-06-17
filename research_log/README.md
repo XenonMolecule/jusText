@@ -63,7 +63,7 @@ Net effect in one line.
 
 ## Index
 
-general/dev F1 progress: 0.762 (baseline) → **0.849** (0009). Lev: 0.682 → **0.772**.
+general/dev F1 progress: 0.762 (baseline) → 0.849 (0009) → **0.870** (0016 fastText-stack). Lev: 0.682 → **0.801**.
 table/dev: 0.0 → **0.449** (0009).
 
 - [0001 — Baseline (jusText v3.0.2)](0001-baseline.md) — general 0.762/0.682
@@ -76,3 +76,6 @@ table/dev: 0.0 → **0.449** (0009).
 - [0008 — Code/math deep-dive](0008-code-math-deepdive.md) — text-stack +0.0035 (not shipped, runtime)
 - [0009 — Stop fragmenting rows/lists](0009-row-list-segmentation.md) — **table +0.24**, raised oracle 0.893→0.902
 - [0010 — Post-breakthrough sweep (negatives)](0010-post-breakthrough-sweep.md) — threshold/forms/language/separator not levers
+- [0011–0013 — text-stack experiments](0013-fuzzy-text-stack.md) — fuzzy label (oracle 0.944), sklearn stack
+- [0014–0015 — ceiling + failure deep-dive II](0015-failure-deepdive-2.md) — precision leak is context-dependent
+- [0016 — fastText-on-100k stack](0016-fasttext-100k-stack.md) — **BEST: general 0.870/0.801**, +data breakthrough

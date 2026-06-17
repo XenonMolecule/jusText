@@ -14,8 +14,11 @@ Design goals (per research log 0003):
 """
 
 import math
+import re
 
 from .core import define_stoplist
+
+_WS = re.compile(r"\s+")
 
 # Heuristic class -> index, used as one-hot features so the model sees the
 # heuristic's own decision and can build on it.
@@ -102,24 +105,44 @@ def paragraph_features(paragraphs, stoplist):
 class ParagraphClassifier:
     """Wraps a trained scikit-learn model and applies it to jusText paragraphs."""
 
-    def __init__(self, model, threshold=0.5, text_vectorizer=None, text_model=None):
+    def __init__(self, model, threshold=0.5, text_vectorizer=None, text_model=None,
+                 fasttext_model=None):
         self.model = model
         self.threshold = threshold
-        # Optional stacked text model (research log 0013): a char-ngram model over the
-        # paragraph text whose keep-probability is appended as a feature to the struct
-        # model. Captures "does this read like kept content" -- the signal the fuzzy
-        # label encodes that structural features miss.
+        # Optional stacked text model: a model over the paragraph text whose keep-
+        # probability is appended as a feature to the struct model. Captures "does this
+        # read like kept content" -- the signal structural features miss. Two backends:
+        #   * sklearn vectorizer + model (research log 0013)
+        #   * fastText (research log 0016): char/word-ngram, trained on 100k docs.
         self.text_vectorizer = text_vectorizer
         self.text_model = text_model
+        self.fasttext_model = fasttext_model
 
     @classmethod
     def load(cls, path, threshold=0.5):
         import joblib  # lazy: only needed when a learned model is used
         payload = joblib.load(path)
-        if isinstance(payload, dict):
-            return cls(payload["model"], payload.get("threshold", threshold),
-                       payload.get("text_vectorizer"), payload.get("text_model"))
-        return cls(payload, threshold)
+        if not isinstance(payload, dict):
+            return cls(payload, threshold)
+        ft = None
+        if payload.get("fasttext_path"):
+            import fasttext  # lazy
+            fasttext.FastText.eprint = lambda *a, **k: None
+            ft = fasttext.load_model(payload["fasttext_path"])
+        return cls(payload["model"], payload.get("threshold", threshold),
+                   payload.get("text_vectorizer"), payload.get("text_model"), ft)
+
+    def _text_prob(self, texts):
+        """Keep-probability per paragraph text from the stacked text model (or None)."""
+        import numpy as np  # lazy
+        if self.fasttext_model is not None:
+            norm = [_WS.sub(" ", t).strip().lower()[:1000] for t in texts]
+            labs, probs = self.fasttext_model.predict(norm, k=2)
+            return np.array([dict(zip(ls, ps)).get("__label__1", 0.0)
+                             for ls, ps in zip(labs, probs)])
+        if self.text_model is not None:
+            return self.text_model.predict_proba(self.text_vectorizer.transform(texts))[:, 1]
+        return None
 
     def predict_keep(self, paragraphs, stoplist):
         """Return a {paragraph-id: keep_bool} decision for text paragraphs."""
@@ -128,9 +151,8 @@ class ParagraphClassifier:
         if not rows:
             return {}
         X = np.asarray(rows)
-        if self.text_model is not None:
-            tp = self.text_model.predict_proba(
-                self.text_vectorizer.transform([p.text for p in kept]))[:, 1]
+        tp = self._text_prob([p.text for p in kept])
+        if tp is not None:
             X = np.hstack([X, tp.reshape(-1, 1)])
         proba = self.model.predict_proba(X)[:, 1]
         return {id(p): bool(pp >= self.threshold) for p, pp in zip(kept, proba)}

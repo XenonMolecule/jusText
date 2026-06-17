@@ -17,3 +17,9 @@ __pycache__
 # to score-compare against a baseline).
 benchmark/datasets/**/*.jsonl.gz
 benchmark/runs/**/*.predictions.jsonl
+
+# fastText models (large; regenerate via train_classifier)
+benchmark/eval/models/*.bin
+
+# large training data at benchmark root (regenerable; tracked outside git)
+benchmark/*.jsonl.gz

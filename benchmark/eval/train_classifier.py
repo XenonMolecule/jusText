@@ -94,6 +94,8 @@ def main():
                     help="rapidfuzz partial_ratio threshold for fuzzy label")
     ap.add_argument("--stack", action="store_true",
                     help="also train a char-ngram text model and stack its prob into the RF")
+    ap.add_argument("--fasttext-model", default=None,
+                    help="path to a trained fastText .bin; stack its keep-prob into the RF")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
     _FUZZY = args.fuzzy; _LABEL = args.label; _OVERLAP = args.label_overlap
@@ -108,8 +110,18 @@ def main():
     X = np.asarray(X); y = np.asarray(y)
     print(f"  {len(y)} paragraphs, positive rate {y.mean():.3f}, {perf_counter()-t0:.1f}s")
 
-    text_vectorizer = text_model = None
-    if args.stack:
+    text_vectorizer = text_model = fasttext_path = None
+    if args.fasttext_model:
+        import fasttext
+        fasttext.FastText.eprint = lambda *a, **k: None
+        ft = fasttext.load_model(args.fasttext_model)
+        norm = [_WS.sub(" ", t).strip().lower()[:1000] for t in texts]
+        labs, probs = ft.predict(norm, k=2)
+        ftp = np.array([dict(zip(ls, ps)).get("__label__1", 0.0) for ls, ps in zip(labs, probs)])
+        X = np.hstack([X, ftp.reshape(-1, 1)])
+        fasttext_path = os.path.abspath(args.fasttext_model)
+        print(f"  stacked fastText keep-prob from {args.fasttext_model}", flush=True)
+    elif args.stack:
         from sklearn.feature_extraction.text import HashingVectorizer
         from sklearn.linear_model import SGDClassifier
         text_vectorizer = HashingVectorizer(analyzer="char_wb", ngram_range=(3, 5),
@@ -130,6 +142,7 @@ def main():
     out = args.out or os.path.join(MODELS_DIR, f"{args.dataset}.joblib")
     joblib.dump({"model": clf, "threshold": 0.5,
                  "text_vectorizer": text_vectorizer, "text_model": text_model,
+                 "fasttext_path": fasttext_path,
                  "config": {"trees": args.trees, "depth": args.depth,
                             "min_leaf": args.min_leaf, "fuzzy": args.fuzzy}},
                 out, compress=3)
