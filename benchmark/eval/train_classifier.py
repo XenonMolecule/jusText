@@ -77,7 +77,8 @@ def load_split(dataset, split):
     X = [row for rows, _, _ in per for row in rows]
     y = [lab for _, labs, _ in per for lab in labs]
     texts = [t for _, _, ts in per for t in ts]
-    return X, y, texts
+    lengths = [len(rows) for rows, _, _ in per]  # paragraphs per doc (for neighbour feats)
+    return X, y, texts, lengths
 
 
 def main():
@@ -106,7 +107,7 @@ def main():
 
     print(f"extracting {args.dataset}/train (label={args.label}, stack={args.stack}) ...", flush=True)
     t0 = perf_counter()
-    X, y, texts = load_split(args.dataset, "train")
+    X, y, texts, lengths = load_split(args.dataset, "train")
     X = np.asarray(X); y = np.asarray(y)
     print(f"  {len(y)} paragraphs, positive rate {y.mean():.3f}, {perf_counter()-t0:.1f}s")
 
@@ -118,7 +119,15 @@ def main():
         norm = [_WS.sub(" ", t).strip().lower()[:1000] for t in texts]
         labs, probs = ft.predict(norm, k=2)
         ftp = np.array([dict(zip(ls, ps)).get("__label__1", 0.0) for ls, ps in zip(labs, probs)])
-        X = np.hstack([X, ftp.reshape(-1, 1)])
+        # neighbour probs within each doc (research log 0019): prev/next keep-prob
+        parts, i = [], 0
+        for L in lengths:
+            seg = ftp[i:i + L]
+            prev = np.concatenate([[0.0], seg[:-1]]) if L else seg
+            nxt = np.concatenate([seg[1:], [0.0]]) if L else seg
+            parts.append(np.column_stack([seg, prev, nxt]))
+            i += L
+        X = np.hstack([X, np.vstack(parts)])
         fasttext_path = os.path.abspath(args.fasttext_model)
         print(f"  stacked fastText keep-prob from {args.fasttext_model}", flush=True)
     elif args.stack:

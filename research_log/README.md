@@ -64,7 +64,7 @@ Net effect in one line.
 ## Index
 
 general/dev F1: 0.762 (baseline) → 0.849 (0009) → 0.870 (0016 fastText) → **0.876** (0018 +dedup). Lev: 0.682 → **0.808**.
-**Current best (ftstack+dedup):** general dev 0.876/0.808, train 0.877/0.811 | code 0.837 | science 0.982 | table 0.507 | math 0.806. Target 0.90/0.85.
+**Current best (ftstack+dedup+neighbor):** general dev 0.880/0.814, train 0.880/0.816 | code 0.837 | science 0.989 | math 0.828 | table 0.399*. Target 0.90/0.85.  (*table 2-doc noise)
 table/dev: 0.0 → **0.449** (0009).
 
 - [0001 — Baseline (jusText v3.0.2)](0001-baseline.md) — general 0.762/0.682
@@ -81,4 +81,5 @@ table/dev: 0.0 → **0.449** (0009).
 - [0014–0015 — ceiling + failure deep-dive II](0015-failure-deepdive-2.md) — precision leak is context-dependent
 - [0016 — fastText-on-100k stack](0016-fasttext-100k-stack.md) — general 0.870/0.801, +data breakthrough
 - [0017 — math deep-dive](0017-math-deepdive-plan.md) — LaTeX-keep NEGATIVE; math-image detector; gold drops image-math
-- [0018 — paragraph dedup](0018-dedup.md) — **BEST: general 0.876/0.808** (+0.006/+0.007, additive)
+- [0018 — paragraph dedup](0018-dedup.md) — general 0.876/0.808 (+0.006/+0.007, additive)
+- [0019 — neighbour fastText-prob](0019-neighbor-ftprob.md) — **BEST: general 0.880/0.814** (boundary signal)

@@ -153,7 +153,13 @@ class ParagraphClassifier:
         X = np.asarray(rows)
         tp = self._text_prob([p.text for p in kept])
         if tp is not None:
-            X = np.hstack([X, tp.reshape(-1, 1)])
+            # Append the text-model keep-prob plus its previous/next neighbours'
+            # probs (research log 0019): content is contiguous, so neighbour keep-
+            # probability sharpens block-boundary decisions. Neighbours are within
+            # this document's paragraph order (0.0 padding at the edges).
+            prev = np.concatenate([[0.0], tp[:-1]])
+            nxt = np.concatenate([tp[1:], [0.0]])
+            X = np.hstack([X, tp.reshape(-1, 1), prev.reshape(-1, 1), nxt.reshape(-1, 1)])
         proba = self.model.predict_proba(X)[:, 1]
         return {id(p): bool(pp >= self.threshold) for p, pp in zip(kept, proba)}
 

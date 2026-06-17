@@ -1,0 +1,50 @@
+{
+  "tag": "0019-nbr",
+  "dataset": "math",
+  "split": "dev",
+  "n_docs": 2,
+  "config": {
+    "justext_version": "3.0.2",
+    "language": "English",
+    "paragraph_separator": "\n\n",
+    "workers": 3,
+    "model": "benchmark/eval/models/general-ftstack.joblib"
+  },
+  "timing": {
+    "run_seconds": 1.7452527919999998,
+    "score_seconds": 0.0038275000000000947,
+    "run_ms_per_doc": 872.6263959999999
+  },
+  "metrics": {
+    "rougeL_f": {
+      "mean": 0.8282916653530481,
+      "median": 0.8282916653530481,
+      "min": 0.7371134020618556,
+      "max": 0.9194699286442405
+    },
+    "rougeL_p": {
+      "mean": 0.7474733190813279,
+      "median": 0.7474733190813279,
+      "min": 0.5983263598326359,
+      "max": 0.8966202783300199
+    },
+    "rougeL_r": {
+      "mean": 0.9516230939878128,
+      "median": 0.9516230939878128,
+      "min": 0.9435146443514645,
+      "max": 0.959731543624161
+    },
+    "lev_distance": {
+      "mean": 1576.5,
+      "median": 1576.5,
+      "min": 281,
+      "max": 2872
+    },
+    "lev_similarity": {
+      "mean": 0.7370540628655812,
+      "median": 0.7370540628655812,
+      "min": 0.5791941391941392,
+      "max": 0.8949139865370231
+    }
+  }
+}
