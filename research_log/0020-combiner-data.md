@@ -38,3 +38,20 @@ retrained: text-only unchanged (0.829 vs 0.828), but the **stack dropped to 0.85
 the combiner liked less. Big_train-only fastText stays best. Net: the data-augmentation
 angle (both combiner-side and fastText-side) does **not** help — confirms 0.880/0.814 is
 the ceiling with the current data; more *volume* of similar data won't move it.
+
+## Follow-up 2: fastText epochs at dim100 — NEGATIVE (ep5 optimal)
+
+Tested more training epochs at the safe dim100 (the failed sweep used dim200): ep5
+text-only 0.826, ep10 0.823, ep20 0.821 — more epochs **overfit and hurt**. The user's
+conservative ep5/dim100/bigrams recipe is optimal. fastText text-only is maxed ~0.828.
+
+## FINAL: every lever exhausted
+
+Confirmed across 0001-0020: features (struct/DOM/content/text/neighbor), combiner (RF>GBM;
+10k-in-dist > 50k-OOD), fastText recipe (ep5/dim100 optimal; more epochs/dim hurt),
+augmentation (neg), rules (threshold/header/window/math-LaTeX/formatting = washes),
+smoothing (neg). Shipped wins: 0002 thresholds, 0003 RF, 0009 segmentation, 0012 <pre>,
+0016 fastText-100k, 0018 dedup, 0019 neighbor-prob. **0.880 F1 / 0.814 Lev on general is
+the definitive practical ceiling of fast CPU paragraph-selection on this gold.** Closing
+the last 0.020/0.036 needs a heavier (e.g. generative) model or a materially different
+data distribution — both outside the fast-extraction paradigm.
