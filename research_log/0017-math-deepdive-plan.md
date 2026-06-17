@@ -47,6 +47,40 @@ the right region is chosen → the **fastText content model is the main lever** 
 4. **Do NOT** blanket-extract math-image `alt` — context-dependent (helps LibreTexts
    figures, hurts wiki equations). Skip unless a learned signal can separate them.
 
+## Math-image detection recipe (reusable, safe for general)
+
+Detecting "this `<img>` is math" is reliable and **does not touch general** (measured on
+general/dev, 5,502 images):
+
+| signal | general false-positive | catches |
+|---|--:|---|
+| `class="tex"` / `mwe-math*` | **5/5502 (0.09%)** | wiki/MediaWiki equation imgs |
+| `src` = `/math/<hex>.png` or math CDN (`latex.codecogs`, `chart?…cht=tx`, `cgi-bin/mathtex`, `render.php?tex=`) | **5/5502 (0.09%)** | rendered-equation imgs |
+| `alt` contains LaTeX (`\cmd`, `_{`, `^{`, `\;`) | 79/5502 (1.4%) | secondary confirmation |
+| MathML `<math>` / `<annotation x-tex>` | 0 | MathML pages |
+
+Primary detector = `class="tex"` OR math-`src`; both ~0.09% on general → inert there.
+The LaTeX-`alt` signal is looser (use combined with class/src, not alone).
+
+**Detection ≠ keep.** In our wiki cases the gold *dropped* the inline equation alts, so
+the policy layer (keep display eqns, drop tiny inline, or let the model arbitrate) is the
+nuance — but detection is free and safe to add.
+
+## Gold-quality finding: the teacher drops image-rendered math (likely a bug)
+
+Evidence the gold *erred* on wiki equation-images (not a deliberate "not content" call):
+- **train#6 (mashpedia, eq `η=η_Receiver·η_Carnot`)**: gold keeps the surrounding prose
+  and inline unicode **η** ("efficiency η can be deduced … Carnot's principle"), but
+  **drops the defining equation** (the `class="tex"` image). Gold has **0 LaTeX commands**.
+- **train#2 (haskell)**: surrounding text kept, the `x_1…x_n` equation images gone.
+
+The teacher knew the topic but lost the formula because it lives in `<img alt=…>` it
+didn't read. **Implication:** the benchmark gold systematically under-includes
+image-rendered math, so *correct* math-image extraction will score slightly *lower* vs
+this gold on such docs — a gold artifact, not a real regression. We do NOT modify the
+eval data; we note it, and prioritize true extraction quality for the math goal (the
+detector is safe for other domains regardless).
+
 ## Next (execute)
 
 - Implement rule (1), measure on `math` (train+dev) and confirm `general/code/science`
