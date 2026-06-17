@@ -55,3 +55,10 @@ smoothing (neg). Shipped wins: 0002 thresholds, 0003 RF, 0009 segmentation, 0012
 the definitive practical ceiling of fast CPU paragraph-selection on this gold.** Closing
 the last 0.020/0.036 needs a heavier (e.g. generative) model or a materially different
 data distribution — both outside the fast-extraction paradigm.
+
+## Follow-up 3: per-doc adaptive threshold — NEGATIVE
+
+Tested per-document thresholds (Otsu on the doc's prob distribution; mean+0.25std) vs
+global 0.5: Otsu 0.874, mean+std 0.873 vs **global 0.5 = 0.878**. The RF probs are
+globally well-calibrated; per-doc thresholds add noise (distributions aren't cleanly
+bimodal). Global 0.5 stays. Yet another confirmed dead-end — the ceiling holds.
