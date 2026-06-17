@@ -23,3 +23,6 @@ benchmark/eval/models/*.bin
 
 # large training data at benchmark root (regenerable; tracked outside git)
 benchmark/*.jsonl.gz
+
+# generated HTML reports (large; regenerate via report.py)
+benchmark/runs/**/*.report.html
