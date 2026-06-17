@@ -1,5 +1,5 @@
 {
-  "tag": "0004-dom-features",
+  "tag": "0007-content-features",
   "dataset": "general",
   "split": "dev",
   "n_docs": 1000,
@@ -11,38 +11,38 @@
     "model": "benchmark/eval/models/general.joblib"
   },
   "timing": {
-    "run_seconds": 12.939354,
-    "score_seconds": 4.43220275,
-    "run_ms_per_doc": 12.939354
+    "run_seconds": 12.898647708,
+    "score_seconds": 8.126499125,
+    "run_ms_per_doc": 12.898647708
   },
   "metrics": {
     "rougeL_f": {
-      "mean": 0.846912916634578,
-      "median": 0.9213265584130581,
+      "mean": 0.8471086647909409,
+      "median": 0.919688553692767,
       "min": 0.0,
       "max": 1.0
     },
     "rougeL_p": {
-      "mean": 0.828752469235586,
-      "median": 0.9186868686868688,
+      "mean": 0.8287592039461972,
+      "median": 0.9193657526018363,
       "min": 0.0,
       "max": 1.0
     },
     "rougeL_r": {
-      "mean": 0.9114174402810891,
-      "median": 0.9776414451261077,
+      "mean": 0.9108995617332803,
+      "median": 0.9765074162188836,
       "min": 0.0,
       "max": 1.0
     },
     "lev_distance": {
-      "mean": 1969.502,
-      "median": 563.5,
+      "mean": 1968.062,
+      "median": 559.5,
       "min": 0,
-      "max": 104133
+      "max": 104348
     },
     "lev_similarity": {
-      "mean": 0.7704189864428127,
-      "median": 0.8486000939264686,
+      "mean": 0.7703987573152676,
+      "median": 0.8457645405824432,
       "min": 0.0,
       "max": 1.0
     }

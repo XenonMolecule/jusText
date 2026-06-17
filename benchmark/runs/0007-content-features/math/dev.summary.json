@@ -1,0 +1,50 @@
+{
+  "tag": "0007-content-features",
+  "dataset": "math",
+  "split": "dev",
+  "n_docs": 2,
+  "config": {
+    "justext_version": "3.0.2",
+    "language": "English",
+    "paragraph_separator": "\n\n",
+    "workers": 8,
+    "model": "benchmark/eval/models/general.joblib"
+  },
+  "timing": {
+    "run_seconds": 1.568667833,
+    "score_seconds": 0.004518832999999889,
+    "run_ms_per_doc": 784.3339165
+  },
+  "metrics": {
+    "rougeL_f": {
+      "mean": 0.8091425714962246,
+      "median": 0.8091425714962246,
+      "min": 0.6884422110552764,
+      "max": 0.9298429319371727
+    },
+    "rougeL_p": {
+      "mean": 0.7405092066378722,
+      "median": 0.7405092066378722,
+      "min": 0.5502008032128514,
+      "max": 0.9308176100628931
+    },
+    "rougeL_r": {
+      "mean": 0.9241666900676757,
+      "median": 0.9241666900676757,
+      "min": 0.9194630872483222,
+      "max": 0.9288702928870293
+    },
+    "lev_distance": {
+      "mean": 1817,
+      "median": 1817.0,
+      "min": 315,
+      "max": 3319
+    },
+    "lev_similarity": {
+      "mean": 0.7061500110782704,
+      "median": 0.7061500110782704,
+      "min": 0.5326668544072093,
+      "max": 0.8796331677493313
+    }
+  }
+}
