@@ -48,11 +48,15 @@ PARAGRAPH_SEPARATOR = "\n\n"
 # jusText worker (runs in a process pool; stoplist built once per worker)
 # --------------------------------------------------------------------------- #
 _STOPLIST = None
+_MODEL = None
 
 
-def _init_worker(language):
-    global _STOPLIST
+def _init_worker(language, model_path):
+    global _STOPLIST, _MODEL
     _STOPLIST = justext.get_stoplist(language)
+    if model_path:
+        from justext.classifier import ParagraphClassifier
+        _MODEL = ParagraphClassifier.load(model_path)
 
 
 def _extract(item):
@@ -60,7 +64,7 @@ def _extract(item):
     index, html = item
     start = perf_counter()
     try:
-        paragraphs = justext.justext(html, _STOPLIST)
+        paragraphs = justext.justext(html, _STOPLIST, model=_MODEL)
         kept = [p for p in paragraphs if not p.is_boilerplate]
         prediction = PARAGRAPH_SEPARATOR.join(p.text for p in kept)
         error = None
@@ -130,15 +134,15 @@ def summarize(values):
 # --------------------------------------------------------------------------- #
 # Stages
 # --------------------------------------------------------------------------- #
-def run_stage(records, language, workers):
+def run_stage(records, language, workers, model_path=None):
     htmls = [(i, r.get("html", "")) for i, r in enumerate(records)]
     start = perf_counter()
     if workers == 1:
-        _init_worker(language)
+        _init_worker(language, model_path)
         results = [_extract(item) for item in htmls]
     else:
         with ProcessPoolExecutor(
-            max_workers=workers, initializer=_init_worker, initargs=(language,)
+            max_workers=workers, initializer=_init_worker, initargs=(language, model_path)
         ) as pool:
             results = list(pool.map(_extract, htmls, chunksize=16))
     elapsed = perf_counter() - start
@@ -191,6 +195,8 @@ def main():
     parser.add_argument("--limit", type=int, default=None, help="only first N docs (smoke test)")
     parser.add_argument("--skip-run", action="store_true",
                         help="reuse existing predictions; only re-score")
+    parser.add_argument("--model", default=None,
+                        help="path to a learned classifier (.joblib) for keep/drop decisions")
     parser.add_argument("--allow-test", action="store_true",
                         help="required to evaluate the held-out test split")
     parser.add_argument("--out-dir", default=os.path.join(BENCH_DIR, "runs"))
@@ -224,7 +230,7 @@ def main():
         run_elapsed = None
         print(f"[run]   reused cached predictions ({len(predictions)} docs)")
     else:
-        predictions, run_elapsed = run_stage(records, args.lang, args.workers)
+        predictions, run_elapsed = run_stage(records, args.lang, args.workers, args.model)
         write_jsonl(pred_path, predictions)
         n_err = sum(1 for p in predictions if p["error"])
         print(f"[run]   {run_elapsed:7.2f}s  "
@@ -249,6 +255,7 @@ def main():
             "language": args.lang,
             "paragraph_separator": PARAGRAPH_SEPARATOR,
             "workers": args.workers,
+            "model": args.model,
         },
         "timing": {
             "run_seconds": run_elapsed,

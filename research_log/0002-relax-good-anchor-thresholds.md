@@ -2,7 +2,7 @@
 
 - **Date:** 2026-06-16
 - **Tag:** `v3.0.2-<sha>` (baseline compared against: `v3.0.2-9fb3340`)
-- **Commit:** _(backfilled next cycle)_
+- **Commit:** `02867f0`
 - **Status:** landed
 
 ## Hypothesis

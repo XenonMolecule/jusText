@@ -1,0 +1,50 @@
+{
+  "tag": "0003-learned-rf",
+  "dataset": "table",
+  "split": "train",
+  "n_docs": 6,
+  "config": {
+    "justext_version": "3.0.2",
+    "language": "English",
+    "paragraph_separator": "\n\n",
+    "workers": 8,
+    "model": "benchmark/eval/models/general.joblib"
+  },
+  "timing": {
+    "run_seconds": 1.756982416,
+    "score_seconds": 0.00330787499999996,
+    "run_ms_per_doc": 292.83040266666666
+  },
+  "metrics": {
+    "rougeL_f": {
+      "mean": 0.021922033602104707,
+      "median": 0.011250639688225799,
+      "min": 0.0,
+      "max": 0.08941176470588236
+    },
+    "rougeL_p": {
+      "mean": 0.08998413937974079,
+      "median": 0.07818771225686941,
+      "min": 0.0,
+      "max": 0.2235294117647059
+    },
+    "rougeL_r": {
+      "mean": 0.01313185106235391,
+      "median": 0.006057551319648094,
+      "min": 0.0,
+      "max": 0.05588235294117647
+    },
+    "lev_distance": {
+      "mean": 3778.5,
+      "median": 2581.5,
+      "min": 1278,
+      "max": 10309
+    },
+    "lev_similarity": {
+      "mean": 0.048282621906634494,
+      "median": 0.04997336165222116,
+      "min": 0.0,
+      "max": 0.13258785942492013
+    }
+  }
+}

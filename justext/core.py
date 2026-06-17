@@ -380,10 +380,14 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         stopwords_high=STOPWORDS_HIGH_DEFAULT, max_link_density=MAX_LINK_DENSITY_DEFAULT,
         max_heading_distance=MAX_HEADING_DISTANCE_DEFAULT, no_headings=NO_HEADINGS_DEFAULT,
         encoding=None, default_encoding=DEFAULT_ENCODING,
-        enc_errors=DEFAULT_ENC_ERRORS, preprocessor=preprocessor):
+        enc_errors=DEFAULT_ENC_ERRORS, preprocessor=preprocessor, model=None):
     """
     Converts an HTML page into a list of classified paragraphs. Each paragraph
     is represented as instance of class ˙˙justext.paragraph.Paragraph˙˙.
+
+    If ``model`` (a ``justext.classifier.ParagraphClassifier``) is given, the learned
+    classifier re-decides each paragraph's class after the heuristic pass, using the
+    heuristic output as features (see research log 0003).
     """
     dom = html_to_dom(html_text, default_encoding, encoding, enc_errors)
     dom = preprocessor(dom)
@@ -393,5 +397,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
     classify_paragraphs(paragraphs, stoplist, length_low, length_high,
         stopwords_low, stopwords_high, max_link_density, no_headings)
     revise_paragraph_classification(paragraphs, max_heading_distance)
+
+    if model is not None:
+        model.apply(paragraphs, stoplist)
 
     return paragraphs
