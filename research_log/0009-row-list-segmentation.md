@@ -2,7 +2,7 @@
 
 - **Date:** 2026-06-17
 - **Tag:** `0009-row-merge` (vs `0004-dom-features`)
-- **Commit:** _(backfilled next cycle)_
+- **Commit:** `346669d`
 - **Status:** landed — **first lever to raise the oracle ceiling.** Shipped.
 
 ## Hypothesis (from reading jusText internals)

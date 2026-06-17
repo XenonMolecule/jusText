@@ -63,4 +63,16 @@ Net effect in one line.
 
 ## Index
 
-- [0001 — Baseline (jusText v3.0.2, unmodified)](0001-baseline.md)
+general/dev F1 progress: 0.762 (baseline) → **0.849** (0009). Lev: 0.682 → **0.772**.
+table/dev: 0.0 → **0.449** (0009).
+
+- [0001 — Baseline (jusText v3.0.2)](0001-baseline.md) — general 0.762/0.682
+- [0002 — Relax good-anchor thresholds](0002-relax-good-anchor-thresholds.md) — **+0.047** (recall fix)
+- [0003 — Learned RandomForest classifier](0003-learned-paragraph-classifier.md) — **+0.034** (opt-in model)
+- [0004 — Labels (neg) + DOM features](0004-labels-and-dom-features.md) — +0.004; table +0.15
+- [0005 — Threshold sweep (negative)](0005-threshold-and-plateau.md) — 0.5 optimal
+- [0006 — Failure-taxonomy tool + ceiling](0006-failure-taxonomy-and-ceiling.md) — oracle 0.893
+- [0007 — Content features (negative, reverted)](0007-code-math-content-features.md)
+- [0008 — Code/math deep-dive](0008-code-math-deepdive.md) — text-stack +0.0035 (not shipped, runtime)
+- [0009 — Stop fragmenting rows/lists](0009-row-list-segmentation.md) — **table +0.24**, raised oracle 0.893→0.902
+- [0010 — Post-breakthrough sweep (negatives)](0010-post-breakthrough-sweep.md) — threshold/forms/language/separator not levers
