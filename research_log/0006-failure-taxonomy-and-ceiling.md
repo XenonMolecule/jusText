@@ -2,7 +2,7 @@
 
 - **Date:** 2026-06-17
 - **Tag:** (analysis + new tool, vs `0004-dom-features`)
-- **Commit:** _(backfilled next cycle)_
+- **Commit:** `1e08aad`
 - **Status:** landed — progress is *understanding*, not an F1 bump (by design)
 
 ## Why this cycle
