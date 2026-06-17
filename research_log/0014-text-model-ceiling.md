@@ -49,3 +49,15 @@ Further gains toward 0.90/0.85 require a **decision only the user can make**:
    runtime/complexity.
 
 Scaling back the autonomous cadence to conserve compute until the user steers.
+
+## Update — readability main-container idea: signal-checked, weak
+
+Tested the one remaining "untried fast idea" (readability-style main-content-container
+detection). Crude version (group paragraphs by dom-path prefix at depths 2-6, pick the
+prefix with the most total text): **P(keep | in-main) = 0.32 vs 0.11 out-of-main** —
+real separation, but **96% of paragraphs land "in main"**, so it only distinguishes the
+4% out-of-main, and the model's existing link-density/position/DOM features already
+capture most of that. Expected lift ~+0.002 — another marginal feature, not a ceiling
+move. A *proper* node-scoring readability pass (needs the live DOM, not dom_path strings)
+might separate more, but it's a real build with uncertain payoff — left for the user.
+Net: confirms there's no cheap fast lever left toward 0.90.
