@@ -164,6 +164,11 @@ class ParagraphClassifier:
         a <pre> are preformatted = intentional content (code, RFCs, ASCII tables) that the
         stopword heuristic wrongly drops. Force-keep them regardless of the model. Helped
         general +0.003 F1 and code +0.014 with no harm to math/science.
+
+        Dedup rule (research log 0018, found via the math/forum duplication case): drop
+        later near-duplicate kept paragraphs (forum quotes, re-rendered LaTeX-source
+        copies, repeated blocks). The gold never repeats a paragraph; jusText keeps every
+        copy. Safe + domain-agnostic; lifted general +0.006 F1 / +0.008 Lev.
         """
         keep = self.predict_keep(paragraphs, stoplist)
         for p in paragraphs:
@@ -171,4 +176,21 @@ class ParagraphClassifier:
                 p.class_type = "good"
             elif id(p) in keep:
                 p.class_type = "good" if keep[id(p)] else "bad"
+        self._dedup_kept(paragraphs)
         return paragraphs
+
+    @staticmethod
+    def _dedup_kept(paragraphs):
+        """Mark later near-duplicate kept paragraphs as boilerplate (in document order)."""
+        from rapidfuzz import fuzz  # lazy
+        seen = []
+        for p in paragraphs:
+            if p.class_type != "good":
+                continue
+            norm = _WS.sub(" ", p.text).strip().lower()
+            if len(norm) < 12:  # keep short lines (could be distinct labels/headers)
+                continue
+            if any(norm == s or fuzz.ratio(norm, s) >= 97 for s in seen):
+                p.class_type = "bad"
+            else:
+                seen.append(norm)

@@ -1,0 +1,50 @@
+{
+  "tag": "0018-dedup",
+  "dataset": "general",
+  "split": "dev",
+  "n_docs": 1000,
+  "config": {
+    "justext_version": "3.0.2",
+    "language": "English",
+    "paragraph_separator": "\n\n",
+    "workers": 2,
+    "model": "benchmark/eval/models/general-fast.joblib"
+  },
+  "timing": {
+    "run_seconds": 47.675653084,
+    "score_seconds": 8.468392375,
+    "run_ms_per_doc": 47.675653084
+  },
+  "metrics": {
+    "rougeL_f": {
+      "mean": 0.8579430119050228,
+      "median": 0.928704645707389,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "rougeL_p": {
+      "mean": 0.8443071491579772,
+      "median": 0.9297632238953895,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "rougeL_r": {
+      "mean": 0.9103373562000437,
+      "median": 0.9713265543115084,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "lev_distance": {
+      "mean": 1802.293,
+      "median": 550.0,
+      "min": 0,
+      "max": 103445
+    },
+    "lev_similarity": {
+      "mean": 0.7834635309097346,
+      "median": 0.8577105804313656,
+      "min": 0.0,
+      "max": 1.0
+    }
+  }
+}
