@@ -44,3 +44,12 @@ try:
     from html import escape
 except ImportError:
     from cgi import escape
+
+try:
+    from html import unescape
+except ImportError:  # Python 2
+    try:
+        from HTMLParser import HTMLParser
+    except ImportError:
+        from html.parser import HTMLParser
+    unescape = HTMLParser().unescape

@@ -85,3 +85,4 @@ table/dev: 0.0 → **0.449** (0009).
 - [0019 — neighbour fastText-prob](0019-neighbor-ftprob.md) — **BEST: general 0.880/0.814** (boundary signal)
 - [0021 — verbatim code indentation](0021-pre-whitespace.md) — preserve `<pre>`/`<textarea>` whitespace (quality)
 - [0022 — mojibake repair](0022-mojibake-repair.md) — signature-gated ftfy fix, quality win, zero regression
+- [0023 — double-entity decode](0023-double-entities.md) — unescape double-encoded entities, quality win, zero regression

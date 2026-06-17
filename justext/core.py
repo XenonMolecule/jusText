@@ -21,7 +21,7 @@ except ImportError:
 from lxml.html.clean import Cleaner
 from xml.sax.handler import ContentHandler
 from .paragraph import Paragraph
-from ._compat import unicode, ignored
+from ._compat import unicode, ignored, unescape
 from .utils import is_blank
 
 
@@ -88,6 +88,23 @@ def repair_mojibake(html_text):
     if not _FTFY:
         return html_text
     return _FTFY.fix_encoding(html_text)
+
+
+# Double-encoded HTML entities (research log 0023). lxml decodes entities once while
+# parsing; when the source was encoded twice (``&amp;amp;``) a literal ``&amp;`` survives
+# into the output. A second unescape pass on the extracted text repairs it. Skipped for
+# verbatim/code paragraphs, where an entity like ``&amp;`` may be shown intentionally.
+ENTITY_PATTERN = re.compile(r"&(?:#\d+|#x[0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]{1,31});")
+
+
+def decode_double_entities(paragraphs):
+    """In-place: unescape surviving HTML entities in non-verbatim paragraph text."""
+    for paragraph in paragraphs:
+        if paragraph.verbatim:
+            continue
+        for i, node in enumerate(paragraph.text_nodes):
+            if ENTITY_PATTERN.search(node):
+                paragraph.text_nodes[i] = unescape(node)
 
 
 class JustextError(Exception):
@@ -448,9 +465,11 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
     classifier re-decides each paragraph's class after the heuristic pass, using the
     heuristic output as features (see research log 0003).
 
-    If ``fix_encoding`` is true (default) and the input shows a mojibake signature, the
-    text is repaired with ftfy before parsing (research log 0022); requires the optional
-    ``ftfy`` dependency and is a no-op without it or on clean input.
+    If ``fix_encoding`` is true (default) it repairs two source-text defects: mojibake in
+    the input (via ftfy, only when a mojibake signature is present -- research log 0022;
+    requires the optional ``ftfy`` dependency, no-op without it) and double-encoded HTML
+    entities surviving into the output (research log 0023). Both are gated, so clean input
+    is unaffected.
     """
     if fix_encoding:
         html_text = repair_mojibake(html_text)
@@ -465,5 +484,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
 
     if model is not None:
         model.apply(paragraphs, stoplist)
+
+    if fix_encoding:
+        decode_double_entities(paragraphs)
 
     return paragraphs
