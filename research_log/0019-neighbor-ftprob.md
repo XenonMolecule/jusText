@@ -39,3 +39,10 @@ on the reliable signals (general 1000 docs, math/science up).
 - The Lev gap (0.036) is now the larger one; it's content-selection-limited (formatting
   gives ≤+0.009). Remaining levers: more fastText data, or precision refinements.
 - Consider guarding the neighbour feature for table-like docs if a real regression.
+
+## Wider window: wash (not added)
+
+Tested distance-2 neighbours and a ±2 rolling mean of fastText-prob: win2 0.869,
+rollmean 0.870, both 0.871 vs nbr1 0.871 (no-pre) — within noise (+0.001). prev/next
+(distance 1) is the sweet spot; not worth 3 more features. Boundary signal is saturated
+at distance 1.
