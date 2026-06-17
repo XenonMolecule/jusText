@@ -2,7 +2,7 @@
 
 - **Date:** 2026-06-17
 - **Tag:** `0013-fuzzy-stack` (vs `0012-pre-rule`)
-- **Commit:** _(backfilled next cycle)_
+- **Commit:** `9477a6e`
 - **Status:** landed — capability shipped; **balanced model kept as default** pending sign-off.
 
 ## What was built
