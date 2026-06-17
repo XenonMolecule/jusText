@@ -2,7 +2,7 @@
 
 - **Date:** 2026-06-17
 - **Tag:** `0004-dom-features` (baseline compared against: `0003-learned-rf`)
-- **Commit:** _(backfilled next cycle)_
+- **Commit:** `2f4d993`
 - **Status:** landed
 
 ## Hypothesis
