@@ -1,0 +1,49 @@
+{
+  "tag": "v3.0.2-9fb3340",
+  "dataset": "general",
+  "split": "test",
+  "n_docs": 1000,
+  "config": {
+    "justext_version": "3.0.2",
+    "language": "English",
+    "paragraph_separator": "\n\n",
+    "workers": 8
+  },
+  "timing": {
+    "run_seconds": 5.722959250000001,
+    "score_seconds": 4.400006790999999,
+    "run_ms_per_doc": 5.722959250000001
+  },
+  "metrics": {
+    "rougeL_f": {
+      "mean": 0.7728746984829403,
+      "median": 0.8843290728503027,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "rougeL_p": {
+      "mean": 0.8301111318673445,
+      "median": 0.9767250156099572,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "rougeL_r": {
+      "mean": 0.7767075478526613,
+      "median": 0.902708010259226,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "lev_distance": {
+      "mean": 2222.84,
+      "median": 756.5,
+      "min": 0,
+      "max": 92993
+    },
+    "lev_similarity": {
+      "mean": 0.6903206488636534,
+      "median": 0.7850264460544107,
+      "min": 0.0,
+      "max": 1.0
+    }
+  }
+}

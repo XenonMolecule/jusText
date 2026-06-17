@@ -1,0 +1,27 @@
+{
+  "domain": "math",
+  "gold_model": "openai/gpt-oss-120b",
+  "gold_spec": "extreme_quality_v5",
+  "html_field": "preprocess_html_for_extraction(raw_html)  (body_strip)",
+  "test_split": "ctrl-bench (static/benchmark/html) for this domain \u2014 sacred, never train/dev",
+  "train_dev_split": "80/20 of deduped collection docs",
+  "leakage_dedup": "collection docs whose body-hash matches a test doc are dropped",
+  "seed": 0,
+  "collections": [
+    "static/math_html",
+    "static/math_v8/html",
+    "static/math_help_forum/html"
+  ],
+  "drops": {
+    "test_nuc": 3,
+    "pool_nuc": 73,
+    "leakage": 2,
+    "pool_dup": 5,
+    "not_in_allowlist": 0
+  },
+  "counts": {
+    "train": 8,
+    "dev": 2,
+    "test": 2
+  }
+}

@@ -1,0 +1,2 @@
+{"warc_record_id": null, "url": null, "snapshot": null, "n_kept": 5, "error": null, "rougeL_p": 0.6666666666666666, "rougeL_r": 0.29473684210526313, "rougeL_f": 0.40875912408759124, "lev_distance": 2003, "lev_similarity": 0.2641440117560617, "pred_chars": 1152, "gold_chars": 2722}
+{"warc_record_id": null, "url": null, "snapshot": null, "n_kept": 24, "error": null, "rougeL_p": 0.24599434495758718, "rougeL_r": 0.3984732824427481, "rougeL_f": 0.3041958041958042, "lev_distance": 4368, "lev_similarity": 0.29988780253245717, "pred_chars": 6239, "gold_chars": 3883}

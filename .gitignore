@@ -10,3 +10,10 @@ __pycache__
 
 # project files
 .idea
+
+# benchmark data + large run artifacts (regenerable; tracked outside git)
+# Data regenerates from each dataset's manifest.json source; predictions are
+# re-produced by run_eval.py. Metrics/summary JSON ARE committed (small, enough
+# to score-compare against a baseline).
+benchmark/datasets/**/*.jsonl.gz
+benchmark/runs/**/*.predictions.jsonl

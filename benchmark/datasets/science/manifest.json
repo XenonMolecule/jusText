@@ -1,0 +1,27 @@
+{
+  "domain": "science",
+  "gold_model": "openai/gpt-oss-120b",
+  "gold_spec": "extreme_quality_v5",
+  "html_field": "preprocess_html_for_extraction(raw_html)  (body_strip)",
+  "test_split": "ctrl-bench (static/benchmark/html) for this domain \u2014 sacred, never train/dev",
+  "train_dev_split": "80/20 of deduped collection docs",
+  "leakage_dedup": "collection docs whose body-hash matches a test doc are dropped",
+  "seed": 0,
+  "collections": [
+    "static/chem_html",
+    "static/med_sites/html",
+    "static/benchmark_old/html/science"
+  ],
+  "drops": {
+    "test_nuc": 8,
+    "pool_nuc": 171,
+    "leakage": 2,
+    "pool_dup": 0,
+    "not_in_allowlist": 0
+  },
+  "counts": {
+    "train": 14,
+    "dev": 3,
+    "test": 2
+  }
+}

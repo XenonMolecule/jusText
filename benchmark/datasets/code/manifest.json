@@ -1,0 +1,26 @@
+{
+  "domain": "code",
+  "gold_model": "openai/gpt-oss-120b",
+  "gold_spec": "extreme_quality_v5",
+  "html_field": "preprocess_html_for_extraction(raw_html)  (body_strip)",
+  "test_split": "ctrl-bench (static/benchmark/html) for this domain \u2014 sacred, never train/dev",
+  "train_dev_split": "80/20 of deduped collection docs",
+  "leakage_dedup": "collection docs whose body-hash matches a test doc are dropped",
+  "seed": 0,
+  "collections": [
+    "static/code_html",
+    "static/code_sites/html"
+  ],
+  "drops": {
+    "test_nuc": 1,
+    "pool_nuc": 103,
+    "leakage": 4,
+    "pool_dup": 0,
+    "not_in_allowlist": 0
+  },
+  "counts": {
+    "train": 44,
+    "dev": 11,
+    "test": 4
+  }
+}
