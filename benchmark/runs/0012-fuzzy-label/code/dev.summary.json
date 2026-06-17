@@ -1,0 +1,50 @@
+{
+  "tag": "0012-fuzzy-label",
+  "dataset": "code",
+  "split": "dev",
+  "n_docs": 11,
+  "config": {
+    "justext_version": "3.0.2",
+    "language": "English",
+    "paragraph_separator": "\n\n",
+    "workers": 8,
+    "model": "benchmark/eval/models/general.joblib"
+  },
+  "timing": {
+    "run_seconds": 1.698221666,
+    "score_seconds": 0.11079679199999992,
+    "run_ms_per_doc": 154.38378781818182
+  },
+  "metrics": {
+    "rougeL_f": {
+      "mean": 0.7962829151597063,
+      "median": 0.8647509153445024,
+      "min": 0.45960125918153205,
+      "max": 0.9813874788494078
+    },
+    "rougeL_p": {
+      "mean": 0.80627420316661,
+      "median": 0.921957671957672,
+      "min": 0.3547516198704104,
+      "max": 1.0
+    },
+    "rougeL_r": {
+      "mean": 0.8009064134053745,
+      "median": 0.8025123558484349,
+      "min": 0.47232472324723246,
+      "max": 0.980309423347398
+    },
+    "lev_distance": {
+      "mean": 3675.4545454545455,
+      "median": 1569,
+      "min": 94,
+      "max": 9346
+    },
+    "lev_similarity": {
+      "mean": 0.6718259885566669,
+      "median": 0.7310632604956362,
+      "min": 0.3517824941045915,
+      "max": 0.9494623655913978
+    }
+  }
+}

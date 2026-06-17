@@ -1,0 +1,50 @@
+{
+  "tag": "0012-pre-rule",
+  "dataset": "code",
+  "split": "dev",
+  "n_docs": 11,
+  "config": {
+    "justext_version": "3.0.2",
+    "language": "English",
+    "paragraph_separator": "\n\n",
+    "workers": 8,
+    "model": "benchmark/eval/models/general.joblib"
+  },
+  "timing": {
+    "run_seconds": 1.568293875,
+    "score_seconds": 0.14020725,
+    "run_ms_per_doc": 142.57217045454544
+  },
+  "metrics": {
+    "rougeL_f": {
+      "mean": 0.8297797736805198,
+      "median": 0.8775510204081634,
+      "min": 0.49867197875166,
+      "max": 0.984841075794621
+    },
+    "rougeL_p": {
+      "mean": 0.7686474293963674,
+      "median": 0.7818181818181819,
+      "min": 0.3745635910224439,
+      "max": 0.976721629485936
+    },
+    "rougeL_r": {
+      "mean": 0.9170506474570325,
+      "median": 0.9334843492586491,
+      "min": 0.7457795431976166,
+      "max": 1.0
+    },
+    "lev_distance": {
+      "mean": 3291.818181818182,
+      "median": 1935,
+      "min": 199,
+      "max": 8401
+    },
+    "lev_similarity": {
+      "mean": 0.7080584415524578,
+      "median": 0.7090909090909091,
+      "min": 0.38322620140801955,
+      "max": 0.968828320802005
+    }
+  }
+}

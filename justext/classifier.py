@@ -124,9 +124,17 @@ class ParagraphClassifier:
         return {id(p): bool(pp >= self.threshold) for p, pp in zip(kept, proba)}
 
     def apply(self, paragraphs, stoplist):
-        """Override each paragraph's class_type from the model (good=keep, bad=drop)."""
+        """Override each paragraph's class_type from the model (good=keep, bad=drop).
+
+        Bespoke rule (research log 0012, found by reading extractions): paragraphs inside
+        a <pre> are preformatted = intentional content (code, RFCs, ASCII tables) that the
+        stopword heuristic wrongly drops. Force-keep them regardless of the model. Helped
+        general +0.003 F1 and code +0.014 with no harm to math/science.
+        """
         keep = self.predict_keep(paragraphs, stoplist)
         for p in paragraphs:
-            if id(p) in keep:
+            if "pre" in p.dom_path.split("."):
+                p.class_type = "good"
+            elif id(p) in keep:
                 p.class_type = "good" if keep[id(p)] else "bad"
         return paragraphs

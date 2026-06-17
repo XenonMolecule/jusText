@@ -15,6 +15,7 @@ import argparse
 import gzip
 import json
 import os
+import re
 import sys
 from concurrent.futures import ProcessPoolExecutor
 from time import perf_counter
@@ -27,11 +28,16 @@ sys.path.insert(0, os.path.dirname(BENCH_DIR))
 import justext  # noqa: E402
 from justext.classifier import paragraph_features  # noqa: E402
 from metrics import tokenize  # noqa: E402
+from rapidfuzz import fuzz  # noqa: E402
+
+_WS = re.compile(r"\s+")
+_LABEL = "overlap"
+_OVERLAP = 0.6
 
 DATASETS_DIR = os.path.join(BENCH_DIR, "datasets")
 MODELS_DIR = os.path.join(_HERE, "models")
 _STOP = justext.get_stoplist("English")
-_OVERLAP = 0.6
+_FUZZY = 85  # rapidfuzz partial_ratio threshold for the keep label (research log 0012)
 
 
 def _extract(args):
@@ -42,11 +48,23 @@ def _extract(args):
     except Exception:
         return [], []
     rows, kept = paragraph_features(paragraphs, _STOP)
-    gset = set(tokenize(gold))
-    labels = []
-    for p in kept:
-        toks = tokenize(p.text)
-        labels.append(1 if toks and sum(t in gset for t in toks) / len(toks) >= _OVERLAP else 0)
+    # Label methods (research log 0012):
+    #  - "overlap": >= _OVERLAP of paragraph tokens present in gold (best for the
+    #    structural RF -- easier to predict from features; shipped).
+    #  - "fuzzy": paragraph text fuzzily matches a substring of gold (rapidfuzz
+    #    partial_ratio). Cleaner label (oracle 0.944) but harder for the struct model;
+    #    useful for the text-stack experiments.
+    if _LABEL == "fuzzy":
+        gnorm = _WS.sub(" ", gold).strip().lower()
+        labels = [1 if (len(p.text.strip()) >= 3 and
+                        fuzz.partial_ratio(_WS.sub(" ", p.text).strip().lower(), gnorm) >= _FUZZY)
+                  else 0 for p in kept]
+    else:
+        gset = set(tokenize(gold))
+        labels = []
+        for p in kept:
+            toks = tokenize(p.text)
+            labels.append(1 if toks and sum(t in gset for t in toks) / len(toks) >= _OVERLAP else 0)
     return rows, labels
 
 
@@ -62,16 +80,20 @@ def load_split(dataset, split):
 
 
 def main():
-    global _OVERLAP
+    global _FUZZY, _LABEL, _OVERLAP
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", default="general")
     ap.add_argument("--trees", type=int, default=30)
     ap.add_argument("--depth", type=int, default=12)
     ap.add_argument("--min-leaf", type=int, default=20)
+    ap.add_argument("--label", choices=["overlap", "fuzzy"], default="overlap",
+                    help="keep-label method (overlap=best for struct model; fuzzy=cleaner)")
     ap.add_argument("--label-overlap", type=float, default=0.6)
+    ap.add_argument("--fuzzy", type=int, default=85,
+                    help="rapidfuzz partial_ratio threshold for fuzzy label")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
-    _OVERLAP = args.label_overlap
+    _FUZZY = args.fuzzy; _LABEL = args.label; _OVERLAP = args.label_overlap
 
     import numpy as np
     import joblib
@@ -93,7 +115,7 @@ def main():
     out = args.out or os.path.join(MODELS_DIR, f"{args.dataset}.joblib")
     joblib.dump({"model": clf, "threshold": 0.5,
                  "config": {"trees": args.trees, "depth": args.depth,
-                            "min_leaf": args.min_leaf, "label_overlap": args.label_overlap}},
+                            "min_leaf": args.min_leaf, "fuzzy": args.fuzzy}},
                 out, compress=3)
     size_kb = os.path.getsize(out) / 1024
     print(f"saved {out}  ({size_kb:.0f} KB)")

@@ -1,0 +1,50 @@
+{
+  "tag": "0012-fuzzy-label",
+  "dataset": "science",
+  "split": "dev",
+  "n_docs": 3,
+  "config": {
+    "justext_version": "3.0.2",
+    "language": "English",
+    "paragraph_separator": "\n\n",
+    "workers": 8,
+    "model": "benchmark/eval/models/general.joblib"
+  },
+  "timing": {
+    "run_seconds": 1.2975460829999999,
+    "score_seconds": 0.010645875000000027,
+    "run_ms_per_doc": 432.515361
+  },
+  "metrics": {
+    "rougeL_f": {
+      "mean": 0.953962763723566,
+      "median": 0.9545970488081725,
+      "min": 0.9466666666666668,
+      "max": 0.9606245756958587
+    },
+    "rougeL_p": {
+      "mean": 0.9581593468094476,
+      "median": 0.9503022162525184,
+      "min": 0.9241758241758242,
+      "max": 1.0
+    },
+    "rougeL_r": {
+      "mean": 0.9523323411893575,
+      "median": 0.9711736444749485,
+      "min": 0.8987341772151899,
+      "max": 0.9870892018779343
+    },
+    "lev_distance": {
+      "mean": 498.6666666666667,
+      "median": 552,
+      "min": 304,
+      "max": 640
+    },
+    "lev_similarity": {
+      "mean": 0.9147521654482472,
+      "median": 0.9181695827725438,
+      "min": 0.8959864330130017,
+      "max": 0.9301004805591961
+    }
+  }
+}

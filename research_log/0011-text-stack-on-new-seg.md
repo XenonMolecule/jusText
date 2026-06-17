@@ -2,7 +2,7 @@
 
 - **Date:** 2026-06-17
 - **Tag:** (experiment on `0009-row-merge` segmentation)
-- **Commit:** _(backfilled next cycle)_
+- **Commit:** `b4f4be5`
 - **Status:** landed — measured, **NOT shipped** (runtime). Best F1 to date.
 
 ## Idea
