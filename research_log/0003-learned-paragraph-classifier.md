@@ -2,7 +2,7 @@
 
 - **Date:** 2026-06-16
 - **Tag:** `0003-learned-rf` (baseline compared against: `0002-relax-thresholds`)
-- **Commit:** _(backfilled next cycle)_
+- **Commit:** `10bd0e4`
 - **Status:** landed
 
 ## Hypothesis

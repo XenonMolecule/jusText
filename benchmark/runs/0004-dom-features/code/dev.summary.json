@@ -1,0 +1,50 @@
+{
+  "tag": "0004-dom-features",
+  "dataset": "code",
+  "split": "dev",
+  "n_docs": 11,
+  "config": {
+    "justext_version": "3.0.2",
+    "language": "English",
+    "paragraph_separator": "\n\n",
+    "workers": 8,
+    "model": "benchmark/eval/models/general.joblib"
+  },
+  "timing": {
+    "run_seconds": 1.7436666250000001,
+    "score_seconds": 0.1345133329999999,
+    "run_ms_per_doc": 158.51514772727273
+  },
+  "metrics": {
+    "rougeL_f": {
+      "mean": 0.8135430202765531,
+      "median": 0.8775510204081634,
+      "min": 0.4882629107981221,
+      "max": 0.9844054580896685
+    },
+    "rougeL_p": {
+      "mean": 0.7558787672481956,
+      "median": 0.7818181818181819,
+      "min": 0.36860759493670886,
+      "max": 0.9730250481695568
+    },
+    "rougeL_r": {
+      "mean": 0.895201181329929,
+      "median": 0.9186351706036745,
+      "min": 0.7172509225092251,
+      "max": 1.0
+    },
+    "lev_distance": {
+      "mean": 3535.3636363636365,
+      "median": 1986,
+      "min": 210,
+      "max": 9617
+    },
+    "lev_similarity": {
+      "mean": 0.6850180100461137,
+      "median": 0.7090909090909091,
+      "min": 0.3696682464454977,
+      "max": 0.9673405909797823
+    }
+  }
+}

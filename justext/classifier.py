@@ -25,9 +25,37 @@ FEATURE_NAMES = [
     "log_len", "log_words", "stopword_density", "link_density", "heading",
     "position", "ends_sentence", "avg_word_len", "not_boilerplate",
     "cf_good", "cf_neargood", "cf_short", "cf_bad",
+    # DOM-structure features from dom_path (research log 0004): where a paragraph
+    # sits in the tree is a strong boilerplate signal the heuristic ignores.
+    "dom_depth", "dom_nav", "dom_aside", "dom_header", "dom_footer", "dom_form",
+    "dom_list", "dom_table", "dom_main", "dom_blockquote",
     "prev_log_len", "prev_sw", "prev_link", "prev_notboiler",
     "next_log_len", "next_sw", "next_link", "next_notboiler",
 ]
+
+# Tag groups searched for inside dom_path (lowercased, dot-separated tags).
+_DOM_BOILER = {"nav": ("nav",), "aside": ("aside",), "header": ("header",),
+               "footer": ("footer",), "form": ("form", "button", "input", "select", "label")}
+_DOM_LIST = ("li", "ul", "ol", "dl", "dd", "dt")
+_DOM_TABLE = ("table", "td", "th", "tr", "tbody", "thead")
+_DOM_MAIN = ("article", "section", "main")
+
+
+def _dom_features(dom_path):
+    tags = dom_path.lower().split(".") if dom_path else []
+    s = set(tags)
+    return [
+        math.log1p(len(tags)),
+        float(any(t in s for t in _DOM_BOILER["nav"])),
+        float("aside" in s),
+        float("header" in s),
+        float("footer" in s),
+        float(any(t in s for t in _DOM_BOILER["form"])),
+        float(any(t in s for t in _DOM_LIST)),
+        float(any(t in s for t in _DOM_TABLE)),
+        float(any(t in s for t in _DOM_MAIN)),
+        float("blockquote" in s),
+    ]
 
 
 def _base_features(paragraph, index, n_paragraphs, stoplist):
@@ -47,7 +75,7 @@ def _base_features(paragraph, index, n_paragraphs, stoplist):
         1.0 if paragraph.heading else 0.0, index / max(1, n_paragraphs - 1),
         ends_sentence, avg_word_len,
         0.0 if paragraph.is_boilerplate else 1.0,
-    ] + cf
+    ] + cf + _dom_features(paragraph.dom_path)
 
 
 def paragraph_features(paragraphs, stoplist):
