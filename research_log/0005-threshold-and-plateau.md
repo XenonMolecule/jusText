@@ -2,7 +2,7 @@
 
 - **Date:** 2026-06-17
 - **Tag:** (no model change — analysis only, vs `0004-dom-features`)
-- **Commit:** _(backfilled next cycle)_
+- **Commit:** `a57e58a`
 - **Status:** landed (negative result, documented to avoid re-tread)
 
 ## Hypothesis
