@@ -647,16 +647,41 @@ def _post_container(body, others):
     return container
 
 
-def vbulletin_paragraphs(dom, include_comments=True):
-    """Return role-prefixed paragraphs for a vBulletin forum thread, or None if not one.
+def _clean_forum_date(text):
+    """Tidy a raw forum date string toward the gold's form (drop ordinals/trailing comma)."""
+    return re.sub(r"(\d+)(st|nd|rd|th)\b", r"\1", re.sub(r"\s+", " ", text)).strip().strip(",")
 
-    Like the SE handler (0031) but for vBulletin's `#post_message_N` bodies: brings each
-    poster's name + date to the front -- `**username** (date)` -- in post order (research
-    log 0039). The gold applies this reorder to every forum thread (in inconsistent formats),
-    so this matches the spirit, a deliberate data-over-metric call. Per-post author/date are
-    read from the post's own block (`_post_container`); embedded "Originally Posted by..."
-    quote blocks are stripped so quoting posts aren't duplicated. Fires only when >=2 posts
-    have a username (else falls back to the normal path)."""
+
+def _forum_thread_paragraphs(dom, posts):
+    """Assemble role-prefixed paragraphs from forum *posts* = [(username, date, body_paras)].
+
+    Shared by the per-engine forum handlers (research log 0039/0040): title, then per post a
+    ``**username** (date)`` marker followed by its body. Returns None if <2 posts.
+    """
+    if len(posts) < 2:
+        return None
+    paragraphs = []
+    title = dom.xpath('//h1//text()') or dom.xpath('//h2//text()')
+    if title and title[0].strip():
+        paragraphs.append(_marker_paragraph(title[0].strip()))
+    for username, date, body_paras in posts:
+        marker = "**%s** (%s)" % (username, date) if date else "**%s**" % username
+        paragraphs.append(_marker_paragraph(marker))
+        for body in body_paras:
+            body.class_type = "good"
+            paragraphs.append(body)
+    return paragraphs
+
+
+def vbulletin_paragraphs(dom, include_comments=True):
+    """Role-prefixed paragraphs for a vBulletin forum thread, or None if not one.
+
+    Brings each poster's name + date to the front -- `**username** (date)` -- in post order
+    (research log 0039). Per-post author/date are read from the post's own block
+    (`_post_container`, the largest ancestor with no other post body, which fixes the 0038
+    misattribution); embedded "Originally Posted by..." quote blocks are stripped. Fires only
+    when >=2 posts have a username (else falls back to the normal path).
+    """
     bodies = dom.xpath('//*[starts-with(@id,"post_message_")]')
     if len(bodies) < 2:
         return None
@@ -669,25 +694,42 @@ def vbulletin_paragraphs(dom, include_comments=True):
         if not username:
             continue
         dates = container.xpath('.//*[contains(@class,"date")]//text()')
-        date = re.sub(r"(\d+)(st|nd|rd|th)\b", r"\1",
-                      " ".join(d.strip() for d in dates if d.strip())).strip().strip(",")
+        date = _clean_forum_date(" ".join(d.strip() for d in dates if d.strip()))
         body_paras = [p for p in ParagraphMaker.make_paragraphs(_strip_quote_blocks(body_el))
                       if p.text.strip()]
         if body_paras:
             posts.append((username, date, body_paras))
-    if len(posts) < 2:
+    return _forum_thread_paragraphs(dom, posts)
+
+
+def phpbb_paragraphs(dom, include_comments=True):
+    """Role-prefixed paragraphs for a phpBB forum thread, or None if not one.
+
+    phpBB's `.postbody` holds both the author line ("by <name> on <date>") and the post
+    `.content`; reuses the shared assembler + quote-stripping (research log 0040). Fires only
+    when >=2 posts have an author + content (else falls back).
+    """
+    postbodies = dom.xpath('//*[contains(@class,"postbody")]')
+    if len(postbodies) < 2:
         return None
-    paragraphs = []
-    title = dom.xpath('//h1//text()')
-    if title and title[0].strip():
-        paragraphs.append(_marker_paragraph(title[0].strip()))
-    for username, date, body_paras in posts:
-        marker = "**%s** (%s)" % (username, date) if date else "**%s**" % username
-        paragraphs.append(_marker_paragraph(marker))
-        for body in body_paras:
-            body.class_type = "good"
-            paragraphs.append(body)
-    return paragraphs
+    posts = []
+    for postbody in postbodies:
+        authors = postbody.xpath('.//*[contains(@class,"author")]')
+        links = authors[0].xpath('.//a//text()') if authors else []
+        username = links[0].strip() if links else ""
+        content = postbody.xpath('.//*[contains(@class,"content")]')
+        if not username or not content:
+            continue
+        date = ""
+        if authors:
+            match = re.search(r"(?:\bon\b|»)\s+(.+)$", re.sub(r"\s+", " ", authors[0].text_content()).strip())
+            if match:
+                date = _clean_forum_date(match.group(1))
+        body_paras = [p for p in ParagraphMaker.make_paragraphs(_strip_quote_blocks(content[0]))
+                      if p.text.strip()]
+        if body_paras:
+            posts.append((username, date, body_paras))
+    return _forum_thread_paragraphs(dom, posts)
 
 
 def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
@@ -726,6 +768,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         qa_paragraphs = stackexchange_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is None:
             qa_paragraphs = vbulletin_paragraphs(dom, include_comments=include_comments)
+        if qa_paragraphs is None:
+            qa_paragraphs = phpbb_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is not None:
             if fix_encoding:
                 decode_double_entities(qa_paragraphs)
