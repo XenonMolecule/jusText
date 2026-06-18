@@ -99,3 +99,4 @@ table/dev: 0.0 → **0.449** (0009).
 - [0052 — code/table newline join](0052-code-newline-join.md) — **NEGATIVE**: re-joining kept rows into a `\n`-block has no Lev upside (U+202F gold cell-typography) and regressed peakbagger −0.13 via dedup; reverted
 - [0053 — reattach orphaned list markers](0053-orphaned-list-markers.md) — **quality win**: bullet/number split from its item text by a `<br>` (within-paragraph); per-doc general Lev net +0.039
 - [0054 — cross-paragraph orphaned markers](0054-cross-paragraph-markers.md) — **quality win**: marker as its own paragraph (li-wraps-block) prepended to next kept para; dedup-safe; 23 general docs improved, 1 trivial regression
+- [0055 — code tables → <pre>](0055-code-table-pre.md) — **code-formatting win**: GitHub/gist line-numbered code tables rewritten to verbatim <pre>; indentation+single-newline preserved (gist Lev 0.679→0.726), aggregate flat, tight gutter gate (no diff/data-table false-fire)

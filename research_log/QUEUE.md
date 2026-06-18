@@ -52,11 +52,13 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
 - **Wikia/infobox formatting** (source-view markup now stripped, 0045; infobox layout still open) — harrypotter.wikia.com/wiki/Tom_Felton?oldid=826898; the gold
   formats the page (infobox/sections) much better than us. Queued.
 - **contentdm spacing** — olemiss/cgsc: handled inline-whitespace (0026) but check residual.
-- ~~roseindia / gist code-line join~~ — CLOSED (0052 NEGATIVE): merging kept table/code rows
-  into one `\n`-joined block has no Lev upside (Exeter cell-separators are U+202F gold-
-  typography; gist doesn't qualify + loses indentation upstream) and regressed peakbagger
-  −0.13 via the dedup interaction. roseindia/dev is over-extraction (Q&A), not newline. The
-  tractable half (keep the rows) shipped in 0051.
+- ~~gist code formatting~~ — SHIPPED (0055): GitHub/gist line-numbered code TABLES rewritten
+  to verbatim <pre> (indentation + single-newline preserved; gist Lev 0.679→0.726, aggregate
+  flat). 0052's table-row-merge was the wrong tool; the real fix is code-table->pre in preprocess.
+- **roseindia / general code-line join** (still open) — code in `<p>`/`<div>` per line joined
+  `\n\n` vs gold `\n`; NO line-number gutter so 0055's detector doesn't catch it. Needs a
+  separate detector (e.g. consecutive sibling <p>/<div> that are code-like). roseindia/dev
+  Q&A page is also dominated by related-Q&A over-extraction (separate issue).
 
 ## Leaked MediaWiki list/indent markup (2026-06-18, investigated — NOT a clean lever)
 On `index.php?title=` source/diff-view wiki pages, raw wikitext line-start markup leaks:

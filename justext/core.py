@@ -320,6 +320,42 @@ def preprocessor(dom):
     return cleaner.clean_html(dom)
 
 
+# Syntax-highlighter code tables (research log 0055). GitHub blob/gist and some highlighters
+# (Crayon) render code as a <table>: one <tr> per line, a line-number "gutter" <td> plus a
+# code <td>. jusText made each <tr> its own paragraph -- so the code came out with every line
+# in a separate block (joined by a blank line) and its indentation stripped by whitespace
+# normalization. We rewrite such a table into a single <pre> (verbatim) so the code keeps its
+# indentation and reads as one block. Gated on an unambiguous line-number gutter (GitHub
+# data-line-number / blob-num / crayon-num) so it never fires on a data table or a MediaWiki
+# diff (those use lineno/de1/de2 -- deliberately excluded).
+_CODE_GUTTER = re.compile(r"\b(?:blob-num|crayon-num)\b", re.I)
+
+
+def _is_gutter_cell(td):
+    return td.get("data-line-number") is not None or bool(_CODE_GUTTER.search(td.get("class") or ""))
+
+
+def rewrite_code_tables(dom):
+    "In-place: replace line-numbered syntax-highlighter code tables with a single <pre>."
+    for table in dom.xpath("//table"):
+        if sum(1 for td in table.xpath(".//td") if _is_gutter_cell(td)) < 4:
+            continue
+        lines = []
+        for tr in table.xpath(".//tr"):
+            cells = tr.xpath("./td")
+            code = [td for td in cells if not _is_gutter_cell(td)]
+            lines.append(code[-1].text_content() if code else "")
+        text = re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip("\n")
+        if not text:
+            continue
+        pre = table.makeelement("pre")
+        pre.text = text
+        parent = table.getparent()
+        if parent is not None:
+            parent.replace(table, pre)
+    return dom
+
+
 # super(...).__init__() breaks Python 2.7 - TypeError: super() argument 1 must be type, not classobj
 # noinspection PyMissingConstructor
 class ParagraphMaker(ContentHandler):
@@ -1000,6 +1036,7 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
             return qa_paragraphs
 
     dom = preprocessor(dom)
+    rewrite_code_tables(dom)
 
     paragraphs = ParagraphMaker.make_paragraphs(dom)
 
