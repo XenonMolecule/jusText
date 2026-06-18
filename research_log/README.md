@@ -90,3 +90,5 @@ table/dev: 0.0 → **0.449** (0009).
 - [0025 — <br> → newline](0025-br-newline.md) — line structure for <br>-separated content; F1-neutral, Lev net-positive (quality)
 - [0026 — inline whitespace](0026-inline-whitespace.md) — keep space between inline elements; **general +0.0022 F1** + fixes mashed words
 - [0027 — angle-bracket emails](0027-angle-emails.md) — escape `<addr@host>` libxml2 ate as a tag; **forum +0.22 F1**, zero regression
+- [0028 — PLANNED forum quotes](0028-PLAN-forum-quotes.md) — reply-quote dedup (deprioritized: jusText > gold on the shared example)
+- [0029 — U+FFFD repair table](0029-fffd-repair.md) — context→char infill for replacement chars; quality fix, zero regression

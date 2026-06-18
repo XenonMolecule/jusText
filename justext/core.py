@@ -123,6 +123,37 @@ def decode_double_entities(paragraphs):
                 paragraph.text_nodes[i] = unescape(node)
 
 
+# U+FFFD repair (research log 0029). A cp1252/Latin-1 byte decoded as utf-8 with
+# errors='replace' becomes U+FFFD -- the byte is lost, but the surrounding context usually
+# pins the original char (apostrophes in contractions dominate, then curly quotes, dashes,
+# accents). _char_repair.REPAIR_TABLE maps a (2-before, 2-after) context to the most-likely
+# char, learned high-confidence from train. Unknown contexts are left as U+FFFD (no guess).
+_REPAIR_TABLE = None
+
+
+def repair_replacement_chars(paragraphs):
+    """In-place: fill U+FFFD in non-verbatim paragraph text from the learned context table."""
+    global _REPAIR_TABLE
+    if _REPAIR_TABLE is None:
+        from ._char_repair import REPAIR_TABLE
+        _REPAIR_TABLE = REPAIR_TABLE
+    if not _REPAIR_TABLE:
+        return
+    for paragraph in paragraphs:
+        if paragraph.verbatim:
+            continue
+        text = "".join(paragraph.text_nodes)
+        if "�" not in text:
+            continue
+        chars = list(text)
+        for i, ch in enumerate(chars):
+            if ch == "�":
+                repl = _REPAIR_TABLE.get((text[i - 2:i], text[i + 1:i + 3]))
+                if repl:
+                    chars[i] = repl
+        paragraph.text_nodes = ["".join(chars)]
+
+
 class JustextError(Exception):
     "Base class for jusText exceptions."
 
@@ -518,5 +549,6 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
 
     if fix_encoding:
         decode_double_entities(paragraphs)
+        repair_replacement_chars(paragraphs)
 
     return paragraphs
