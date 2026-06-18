@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Auto-generated U+FFFD repair table (research log 0029).
-Maps a (2-chars-before, 2-chars-after) context around a replacement char to the
-most-likely original character, learned from general/train by aligning corrupted
-html to the gold (kept only contexts with >=3 samples and >=80% agreement).
-Rebuild: benchmark/eval/build_char_repair.py
+"""Auto-generated U+FFFD repair tables (research log 0029, 0036).
+Map a context around a replacement char to the most-likely original character,
+learned from general/train by aligning corrupted html to the gold. REPAIR_TABLE is
+the precise (2-before, 2-after) tier (>=3 samples, >=80%); REPAIR_TABLE_1 is a
+(1-before, 1-after) fallback (>=5 samples, >=85%) that recovers curly quotes/dashes
+the 2-char tier misses. Apply 2-char first, then 1-char. Rebuild:
+benchmark/eval/build_char_repair.py
 """
 
 REPAIR_TABLE = {
@@ -242,4 +244,69 @@ REPAIR_TABLE = {
     ('y,', ' h'): '”',
     ('y,', ' s'): '”',
     ('y.', ' I'): '”',
+}
+
+REPAIR_TABLE_1 = {
+    (' ', ' '): '–',
+    (' ', '0'): '’',
+    (' ', 'A'): '“',
+    (' ', 'G'): '“',
+    (' ', 'I'): '“',
+    (' ', 'L'): '“',
+    (' ', 'M'): '“',
+    (' ', 'O'): '“',
+    (' ', 'P'): '“',
+    (' ', 'S'): '“',
+    (' ', 'Y'): '“',
+    (' ', 'b'): 'ü',
+    (' ', 'm'): '“',
+    ("'", 'n'): 'ı',
+    (',', ' '): '”',
+    ('.', ' '): '”',
+    ('?', ' '): '”',
+    ('A', '1'): '‑',
+    ('I', 'd'): '’',
+    ('I', 'l'): '’',
+    ('I', 'm'): '’',
+    ('I', 'v'): '’',
+    ('a', 'a'): 'ł',
+    ('a', 'l'): 'ü',
+    ('a', 's'): '’',
+    ('b', 't'): 'ü',
+    ('c', 's'): '’',
+    ('d', 's'): '’',
+    ('e', 's'): '’',
+    ('e', 'v'): '’',
+    ('f', 'r'): 'ü',
+    ('g', 's'): '’',
+    ('g', 'z'): 'ü',
+    ('i', 's'): '’',
+    ('k', 's'): '’',
+    ('l', 'c'): 'í',
+    ('l', 's'): '’',
+    ('m', ' '): 'ı',
+    ('n', 's'): '’',
+    ('n', 't'): '’',
+    ('o', 'c'): 'ś',
+    ('r', 'd'): 'ę',
+    ('r', 'h'): 'ü',
+    ('r', 's'): '’',
+    ('r', 'w'): 'ó',
+    ('s', 'f'): 'ı',
+    ('t', 'c'): 'ü',
+    ('t', 'r'): 'ı',
+    ('t', 's'): '’',
+    ('u', 'a'): 'í',
+    ('u', 'r'): '’',
+    ('u', 'v'): '’',
+    ('w', ' '): '”',
+    ('w', 'h'): 'ä',
+    ('w', 's'): '’',
+    ('x', 's'): '’',
+    ('y', ' '): '”',
+    ('y', 'l'): '’',
+    ('y', 'r'): '’',
+    ('y', 's'): '’',
+    ('y', 'v'): '’',
+    ('z', ' '): 'ę',
 }

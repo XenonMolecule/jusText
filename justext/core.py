@@ -129,15 +129,21 @@ def decode_double_entities(paragraphs):
 # accents). _char_repair.REPAIR_TABLE maps a (2-before, 2-after) context to the most-likely
 # char, learned high-confidence from train. Unknown contexts are left as U+FFFD (no guess).
 _REPAIR_TABLE = None
+_REPAIR_TABLE_1 = None
 
 
 def repair_replacement_chars(paragraphs):
-    """In-place: fill U+FFFD in non-verbatim paragraph text from the learned context table."""
-    global _REPAIR_TABLE
+    """In-place: fill U+FFFD in non-verbatim paragraph text from the learned context tables.
+
+    Tries the precise (2-before, 2-after) table first, then a (1-before, 1-after) fallback
+    that recovers curly quotes / dashes the 2-char tier misses (research log 0036).
+    """
+    global _REPAIR_TABLE, _REPAIR_TABLE_1
     if _REPAIR_TABLE is None:
-        from ._char_repair import REPAIR_TABLE
+        from ._char_repair import REPAIR_TABLE, REPAIR_TABLE_1
         _REPAIR_TABLE = REPAIR_TABLE
-    if not _REPAIR_TABLE:
+        _REPAIR_TABLE_1 = REPAIR_TABLE_1
+    if not _REPAIR_TABLE and not _REPAIR_TABLE_1:
         return
     for paragraph in paragraphs:
         if paragraph.verbatim:
@@ -148,7 +154,8 @@ def repair_replacement_chars(paragraphs):
         chars = list(text)
         for i, ch in enumerate(chars):
             if ch == "�":
-                repl = _REPAIR_TABLE.get((text[i - 2:i], text[i + 1:i + 3]))
+                repl = (_REPAIR_TABLE.get((text[i - 2:i], text[i + 1:i + 3]))
+                        or _REPAIR_TABLE_1.get((text[i - 1:i], text[i + 1:i + 2])))
                 if repl:
                     chars[i] = repl
         paragraph.text_nodes = ["".join(chars)]
