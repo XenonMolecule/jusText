@@ -55,10 +55,11 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
 - ~~gist code formatting~~ — SHIPPED (0055): GitHub/gist line-numbered code TABLES rewritten
   to verbatim <pre> (indentation + single-newline preserved; gist Lev 0.679→0.726, aggregate
   flat). 0052's table-row-merge was the wrong tool; the real fix is code-table->pre in preprocess.
-- **roseindia / general code-line join** (still open) — code in `<p>`/`<div>` per line joined
-  `\n\n` vs gold `\n`; NO line-number gutter so 0055's detector doesn't catch it. Needs a
-  separate detector (e.g. consecutive sibling <p>/<div> that are code-like). roseindia/dev
-  Q&A page is also dominated by related-Q&A over-extraction (separate issue).
+- ~~roseindia <code>-block indentation~~ — SHIPPED (0056): multi-line <code> (br-gated) →
+  verbatim <pre>, restores &nbsp; indentation (roseindia train Lev 0.873→0.900), aggregate flat.
+- **general line-per-<p>/<div> code** (still open) — code split across sibling <p>/<div> with
+  NO <code>/gutter signal joined \n\n vs gold \n; needs a code-likeness detector for bare
+  block runs (riskier). Deferred.
 
 ## Leaked MediaWiki list/indent markup (2026-06-18, investigated — NOT a clean lever)
 On `index.php?title=` source/diff-view wiki pages, raw wikitext line-start markup leaks:

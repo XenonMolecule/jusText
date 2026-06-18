@@ -335,6 +335,48 @@ def _is_gutter_cell(td):
     return td.get("data-line-number") is not None or bool(_CODE_GUTTER.search(td.get("class") or ""))
 
 
+def _code_block_text(el):
+    "Serialize a code element to text: <br> -> newline, &nbsp; (U+00A0) -> space."
+    for br in el.xpath(".//br"):
+        # Strip newlines the source already put after the <br> (pretty-printed HTML) before
+        # adding ours, so a "line<br>\nline" doesn't become a double blank line. Keep leading
+        # spaces (= indentation) and a genuine <br><br> still yields a blank line.
+        br.tail = "\n" + (br.tail or "").lstrip("\n\r")
+    text = el.text_content().replace("\xa0", " ")
+    return re.sub(r"\n{3,}", "\n\n", text).strip("\n")
+
+
+def rewrite_code_blocks(dom):
+    """In-place: turn a multi-line ``<code>`` block into a verbatim ``<pre>``.
+
+    Sites wrap a whole code listing in ``<code>`` (often inside a styled box), using ``<br>``
+    for line breaks and ``&nbsp;`` for indentation (e.g. roseindia). jusText normalizes that
+    away -- the code keeps its line breaks (``<br>`` -> newline, 0025) but loses indentation,
+    because ``<code>`` is not verbatim. Converting a *block* ``<code>`` (multi-line, long) to a
+    ``<pre>`` restores it. Gated to block code only (``<br>`` or newline AND >80 chars), so
+    short inline ``<code>foo()</code>`` snippets in prose are untouched.
+    """
+    for code in dom.xpath("//code"):
+        content = code.text_content() or ""
+        if len(content) <= 80:
+            continue
+        # Require <br> line breaks: that marks a real multi-line code listing whose
+        # indentation we lose. A <code> that relies only on source newlines is usually
+        # pre-formatted already or a data blob (e.g. a JSON dump) the gold renders
+        # differently -- converting it regresses (chroniclingamerica).
+        if not code.xpath(".//br"):
+            continue
+        text = _code_block_text(code)
+        if not text:
+            continue
+        pre = code.makeelement("pre")
+        pre.text = text
+        parent = code.getparent()
+        if parent is not None:
+            parent.replace(code, pre)
+    return dom
+
+
 def rewrite_code_tables(dom):
     "In-place: replace line-numbered syntax-highlighter code tables with a single <pre>."
     for table in dom.xpath("//table"):
@@ -1037,6 +1079,7 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
 
     dom = preprocessor(dom)
     rewrite_code_tables(dom)
+    rewrite_code_blocks(dom)
 
     paragraphs = ParagraphMaker.make_paragraphs(dom)
 
