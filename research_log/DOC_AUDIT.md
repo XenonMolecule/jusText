@@ -23,6 +23,8 @@ significant regressions. One row per doc: idx, url, mistake, fix/verdict.
 | 16 | 910 | insidesocal horseracing | 0.76 | byline "Posted on X by Y" vs gold "X – Y" + md break | content/format |
 | 17 | 230 | applegazette | 0.55 | gold truncates comment thread (6.4k); we keep all (16k) | gold under-extraction (our data more complete) |
 | 18-31 | 48,120,204,258,288,324,336,342,360,378,384,414,462,492 | (batch) | 0.5-0.82 | 7 over-extract(comments/boilerplate), 5 content-selection, 1 FFFD(fixunix lossy), 1 under-extract | gold-limited majority; artifacts already handled |
+| 32 | table/0 | discovernorthcounty property | 0.43 | selects wrong block (area-chooser nav) instead of property-detail table | content-selection (wrong block) |
+| 33 | table/1 | exetercity-mad league table | 0.35 | right rows; classifier keeps 5/24 (row-cohesion); gold uses U+202F+`  \n` | tried row-cohesion (0050) NEGATIVE; rest gold-typography |
 
 ## Verdict (30 docs analyzed)
 

@@ -42,6 +42,11 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
   Check whether hidden/collapsed comments (beyond the displayed `.comment-copy`) are captured;
   the gold may include comments our extractor doesn't reach.
 
+- **Table-row cohesion** — ATTEMPTED & NEGATIVE (0050): keeping all rows of a table when
+  several are kept regresses general (blanket −0.0030; digit-gated flat-aggregate but all 19
+  touched general docs net-negative, keeping numeric spec/stat rows the gold drops). Table
+  dataset (F1 0.388) is gold/content-selection-limited, not a row-cohesion bug. Not a lever.
+
 ## Formatting / quality
 - **Wikia/infobox formatting** (source-view markup now stripped, 0045; infobox layout still open) — harrypotter.wikia.com/wiki/Tom_Felton?oldid=826898; the gold
   formats the page (infobox/sections) much better than us. Queued.
