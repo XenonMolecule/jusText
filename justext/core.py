@@ -241,7 +241,12 @@ class ParagraphMaker(ContentHandler):
                 self.paragraph.append_text(' ')
             self.br = bool(name == "br")
             if self.br:
-                self.paragraph.append_text(' ')
+                # A single <br> is a line break: emit a newline (the gold respects
+                # <br> line structure -- addresses, contact blocks, <br>-separated
+                # lists/publications). normalize_whitespace keeps the \n because the
+                # run contains a newline (research log 0025). <br><br> still becomes a
+                # paragraph break via the name=="br" and self.br branch above.
+                self.paragraph.append_text('\n')
             elif name == 'a':
                 self.link = True
             self.paragraph.tags_count += 1

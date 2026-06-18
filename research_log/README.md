@@ -87,3 +87,4 @@ table/dev: 0.0 → **0.449** (0009).
 - [0022 — mojibake repair](0022-mojibake-repair.md) — signature-gated ftfy fix, quality win, zero regression
 - [0023 — double-entity decode](0023-double-entities.md) — unescape double-encoded entities, quality win, zero regression
 - [0024 — markdown trigger classifier](0024-markdown-trigger.md) — NEGATIVE: gold bolding unpredictable (per-doc & per-span both learn "never bold")
+- [0025 — <br> → newline](0025-br-newline.md) — line structure for <br>-separated content; F1-neutral, Lev net-positive (quality)
