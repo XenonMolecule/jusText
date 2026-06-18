@@ -18,6 +18,11 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
   temp dev (user's method -- it correctly caught this breakage).
 - **fastText router** — route pages to the right handler / the general one (needs big_train).
 
+- **Comment recall** — even with comments-on (0034), still missing valuable comments on
+  mathematica.stackexchange.com/questions/733 and english.stackexchange.com/questions/19985.
+  Check whether hidden/collapsed comments (beyond the displayed `.comment-copy`) are captured;
+  the gold may include comments our extractor doesn't reach.
+
 ## Formatting / quality
 - **Wikia/infobox formatting** — harrypotter.wikia.com/wiki/Tom_Felton?oldid=826898; the gold
   formats the page (infobox/sections) much better than us. Queued.
