@@ -174,10 +174,33 @@ def repair_replacement_chars(paragraphs):
 # line (289 occurrences across 46 dev docs). Matches only a line that is *exactly* a bullet
 # (`-`) or an ordered marker (`12.`), followed by a newline then non-space content.
 ORPHANED_MARKER_PATTERN = re.compile(r"(^|\n)(-|\d{1,3}\.)\n(?=\S)")
+_BARE_MARKER = re.compile(r"^(-|\d{1,3}\.)$")
 
 
 def fix_orphaned_list_markers(paragraphs):
-    """In-place: rejoin a list marker orphaned on its own line with its item text."""
+    """In-place: rejoin a list marker orphaned from its item text.
+
+    Two cases, both from a `<li>` whose text is preceded by a `<br>`/block:
+    * within-paragraph -- the merged list paragraph reads ``…\n-\nitem…`` (marker on its own
+      line); the regex reattaches it to the next line.
+    * cross-paragraph -- the `<li>` wrapped a block, so the marker is its OWN paragraph and
+      the item text is the next kept paragraph. Prepend the marker to that next kept
+      paragraph and drop the marker paragraph. Only kept paragraphs are touched, so deduped
+      content is never resurrected (cf. the 0052 peakbagger regression).
+    """
+    # Cross-paragraph: a kept <li> paragraph that is JUST a marker -> prepend to next kept.
+    kept = [p for p in paragraphs if not p.is_boilerplate]
+    for i, p in enumerate(kept[:-1]):
+        text = p.text.strip()
+        if (_BARE_MARKER.match(text) and "li" in p.dom_path.lower().split(".")):
+            nxt = kept[i + 1]
+            if _BARE_MARKER.match(nxt.text.strip()):
+                continue  # don't merge a marker into another marker
+            nxt.text_nodes = [text + " " + nxt.text]
+            p.text_nodes = []
+            p.class_type = "bad"
+
+    # Within-paragraph: marker stranded on its own line inside a merged list paragraph.
     for paragraph in paragraphs:
         if paragraph.verbatim:
             continue

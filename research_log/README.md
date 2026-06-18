@@ -97,4 +97,5 @@ table/dev: 0.0 → **0.449** (0009).
 - [0050 — table-row cohesion](0050-table-row-cohesion.md) — **NEGATIVE**: blanket/digit-gated row cohesion regresses real general docs
 - [0051 — uniform data-table rows](0051-uniform-table-rows.md) — **WIN**: keep whole table when rows are uniform (≥8, low length-CV, short cells) & some kept; **table 0.388→0.710, general 0.8850→0.8852, zero regression**
 - [0052 — code/table newline join](0052-code-newline-join.md) — **NEGATIVE**: re-joining kept rows into a `\n`-block has no Lev upside (U+202F gold cell-typography) and regressed peakbagger −0.13 via dedup; reverted
-- [0053 — reattach orphaned list markers](0053-orphaned-list-markers.md) — **quality win**: bullet/number split from its item text by a `<br>` (289 cases/46 docs); per-doc general Lev net +0.039, zero regression
+- [0053 — reattach orphaned list markers](0053-orphaned-list-markers.md) — **quality win**: bullet/number split from its item text by a `<br>` (within-paragraph); per-doc general Lev net +0.039
+- [0054 — cross-paragraph orphaned markers](0054-cross-paragraph-markers.md) — **quality win**: marker as its own paragraph (li-wraps-block) prepended to next kept para; dedup-safe; 23 general docs improved, 1 trivial regression

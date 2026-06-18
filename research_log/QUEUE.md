@@ -58,12 +58,6 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
   −0.13 via the dedup interaction. roseindia/dev is over-extraction (Q&A), not newline. The
   tractable half (keep the rows) shipped in 0051.
 
-- **Cross-paragraph orphaned list markers** — 0053 fixed the within-paragraph case (br after
-  marker). The cross-paragraph case (marker is its own paragraph because the `<li>` held a
-  block, e.g. dianerehmshow ~22) needs merging the marker paragraph into the next — same
-  paragraph-merge that regressed peakbagger via dedup in 0052. Deferred; needs a dedup-safe
-  merge (e.g. merge BEFORE dedup, or exempt marker-merges).
-
 ## Methodology
 - When out of fix ideas: sample ~5 partial-F1 docs, look for a common error, fix it. This has
   repeatedly surfaced wins we'd deemed impossible (mojibake, spacing, br, emails).
