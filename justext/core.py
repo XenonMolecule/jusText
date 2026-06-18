@@ -54,6 +54,10 @@ PARAGRAPH_TAGS = frozenset({
 SEPARATOR_TAGS = frozenset({
     'td', 'th', 'li', 'dd', 'dt', 'option', 'caption',
 })
+_STRUCTURAL_LIST = ("nav", "menu", "tab", "crumb", "pag", "sidebar", "widget", "toolbar",
+                    "social", "share", "related", "posts", "comment", "footer", "header",
+                    "breadcrumb", "links")  # list classes that mark non-content lists (0049)
+
 DEFAULT_ENCODING = 'utf8'
 DEFAULT_ENC_ERRORS = 'replace'
 CHARSET_META_TAG_PATTERN = re.compile(br"""<meta[^>]+charset=["']?([^'"/>\s]+)""", re.IGNORECASE)
@@ -306,8 +310,16 @@ class ParagraphMaker(ContentHandler):
         self.path.append(name)
 
         # Track list nesting so <li> items get markdown markers (research log 0037).
+        # Skip markers for STRUCTURAL lists (forum post lists, nav/menus/sidebars) whose
+        # class flags them as non-content -- otherwise forum posts in `<ol class="posts">`
+        # get numbered "1. 2." when a forum handler misses the page (research log 0049).
         if name in ("ol", "ul"):
-            self.list_stack.append([name, 0])
+            try:
+                cls = (attrs.get((None, "class")) or "").lower()
+            except Exception:
+                cls = ""
+            emit = not any(k in cls for k in _STRUCTURAL_LIST)
+            self.list_stack.append([name, 0, emit])
 
         if name in PARAGRAPH_TAGS or (name == "br" and self.br):
             if name == "br":
@@ -327,7 +339,7 @@ class ParagraphMaker(ContentHandler):
                 # A list item starts a new line with its marker -- "1. " inside <ol>,
                 # "- " inside <ul> -- so numbered/bulleted lists keep their structure
                 # (research log 0037). normalize_whitespace keeps the leading \n.
-                if name == "li" and self.list_stack:
+                if name == "li" and self.list_stack and self.list_stack[-1][2]:
                     item = self.list_stack[-1]
                     item[1] += 1
                     marker = ("%d. " % item[1]) if item[0] == "ol" else "- "

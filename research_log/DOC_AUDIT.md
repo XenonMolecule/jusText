@@ -14,3 +14,6 @@ significant regressions. One row per doc: idx, url, mistake, fix/verdict.
 | 7 | 577 | soc.mil swmag | 0.83 | gold uses `  \n` md line-break after byline; we use `\n` | minor formatting |
 | 8 | 18b | (see #1) | | | |
 | 9 | (studiopress+7 train) | bbPress | | username-after-body | PATCHED 0048 (bbPress handler, +0.0229 train) |
+| 10 | 83 | stackoverflow forms-auth | 0.73 | SE: gold omits Q-marker, uses "Answer by X"; comments over-included (gold omits) | gold-format variation + comment trade (not a bug) |
+  | 11 | (XenForo train) | XenForo | | persistent: fires 2/71, -0.66 garbage | DEFERRED (3rd failure) |
+| 12 | 179 | wehavelupus | 0.77 | <ol class=posts> numbered as 1.2.3. (forum miss) | PATCHED 0049 (structural-list skip); + widespread, general +0.0002 |

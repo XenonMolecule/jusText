@@ -11,7 +11,7 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
 - **General forum detector** — ATTEMPTED & NEGATIVE (0043): false-fired on 52 non-forum docs
   and regressed -0.34 even on real forums (no clean body selector). Not achievable with
   heuristics. Per-engine handlers remain the only reliable path.
-- **`<ol>` misfire** (0041 plan) — structural lists (`<ol class="posts"/"d1">`) get numbered
+- ~~`<ol>` misfire~~ FIXED (0049, structural-class skip).  (orig: — structural lists (`<ol class="posts"/"d1">`) get numbered
   when a forum handler misses (forum.wehavelupus.com/showthread.php?9181). TRIED a block-aware
   rule (no marker if the <li> contains a block) -- REVERTED: it also broke the gist list,
   whose real items wrap text in <p>. The distinguisher is item SIZE (forum post = huge) not
