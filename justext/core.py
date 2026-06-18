@@ -265,6 +265,7 @@ class ParagraphMaker(ContentHandler):
         self.link = False
         self.br = False
         self.pre = 0  # depth inside <pre>/<textarea>: preserve whitespace verbatim (0021)
+        self.list_stack = []  # stack of [tag, counter] for <ol>/<ul> list markers (0037)
         self._start_new_pragraph()
 
     def _start_new_pragraph(self):
@@ -276,6 +277,10 @@ class ParagraphMaker(ContentHandler):
     def startElementNS(self, name, qname, attrs):
         name = name[1]
         self.path.append(name)
+
+        # Track list nesting so <li> items get markdown markers (research log 0037).
+        if name in ("ol", "ul"):
+            self.list_stack.append([name, 0])
 
         if name in PARAGRAPH_TAGS or (name == "br" and self.br):
             if name == "br":
@@ -292,7 +297,16 @@ class ParagraphMaker(ContentHandler):
             # Cell/item tags don't break the paragraph (0009) but separate their
             # text with a space so a row reads "Bedrooms: 4", not "Bedrooms4".
             if name in SEPARATOR_TAGS:
-                self.paragraph.append_text(' ')
+                # A list item starts a new line with its marker -- "1. " inside <ol>,
+                # "- " inside <ul> -- so numbered/bulleted lists keep their structure
+                # (research log 0037). normalize_whitespace keeps the leading \n.
+                if name == "li" and self.list_stack:
+                    item = self.list_stack[-1]
+                    item[1] += 1
+                    marker = ("%d. " % item[1]) if item[0] == "ol" else "- "
+                    self.paragraph.append_text("\n" + marker)
+                else:
+                    self.paragraph.append_text(' ')
             self.br = bool(name == "br")
             if self.br:
                 # A single <br> is a line break: emit a newline (the gold respects
@@ -311,6 +325,8 @@ class ParagraphMaker(ContentHandler):
 
         if name in ("pre", "textarea") and self.pre > 0:
             self.pre -= 1
+        if name in ("ol", "ul") and self.list_stack:
+            self.list_stack.pop()
         if name in PARAGRAPH_TAGS:
             self._start_new_pragraph()
         elif name in SEPARATOR_TAGS:
