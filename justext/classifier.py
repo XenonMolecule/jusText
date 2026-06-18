@@ -182,11 +182,11 @@ class ParagraphClassifier:
                 p.class_type = "good"
             elif id(p) in keep:
                 p.class_type = "good" if keep[id(p)] else "bad"
-        self._dedup_kept(paragraphs)
+        self._dedup_kept(paragraphs, stoplist)
         return paragraphs
 
     @staticmethod
-    def _dedup_kept(paragraphs):
+    def _dedup_kept(paragraphs, stoplist):
         """Mark later near-duplicate kept paragraphs as boilerplate (in document order).
 
         Comparison normalises curly/straight quotes and drops U+FFFD so the same text in
@@ -194,6 +194,10 @@ class ParagraphClassifier:
         intro with curly vs straight apostrophes was kept twice). Also drops a substantial
         paragraph that is near-exactly *contained* in an earlier, longer kept one (teaser /
         summary excerpts), which the equal-length ratio test misses.
+
+        Dedup targets repeated PROSE (forum quotes, teasers). Code/data lines are skipped --
+        they have near-zero stopword density and legitimately repeat (two SQL examples can
+        share a first line; loops repeat), so deduping them breaks code (research log 0044).
         """
         from rapidfuzz import fuzz  # lazy
 
@@ -208,6 +212,15 @@ class ParagraphClassifier:
         seen = []
         for p in paragraphs:
             if p.class_type != "good":
+                continue
+            # Don't dedup code/data: verbatim, prose-poor (low stopword density), or
+            # punctuation-heavy (code has ~20% non-alphanumeric chars -- quotes/parens/
+            # semicolons -- vs ~2-4% for prose). Such paragraphs neither get dropped nor
+            # cause later paragraphs to be dropped, so two SQL examples sharing a first
+            # line both survive (research log 0044).
+            text = p.text
+            punct = sum(1 for c in text if not c.isalnum() and not c.isspace())
+            if p.verbatim or punct / max(1, len(text)) > 0.13:
                 continue
             n = norm(p.text)
             if len(n) < 12:  # keep short lines (could be distinct labels/headers)

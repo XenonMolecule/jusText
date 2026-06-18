@@ -24,6 +24,7 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
   post block; (2) outermost-dedup direction inverted (kept innermost). Rework: find the real
   per-post container across skins (like `_post_container`), validate on the 71 TRAIN docs as a
   temp dev (user's method -- it correctly caught this breakage).
+- **wordpress.org/support** (bbPress) — user-flagged forum to check (topic/plugin-wp-pagenavi).
 - **fastText router** — route pages to the right handler / the general one (needs big_train).
 
 - **Comment recall** — even with comments-on (0034), still missing valuable comments on
