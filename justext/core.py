@@ -275,6 +275,15 @@ class ParagraphMaker(ContentHandler):
             text = self.paragraph.append_text(content, normalize=False)
         else:
             if is_blank(content):
+                # Whitespace between inline elements -- e.g. "<a>data</a> <a>x</a>" or
+                # word-per-span CMS markup -- arrives as a blank text node. Dropping it
+                # mashed adjacent words ("datatransmission"); keep a single space so they
+                # stay separated (research log 0026). normalize_whitespace collapses any
+                # resulting run, so this can never double-space; the guard avoids a
+                # leading space on a fresh paragraph. self.br is left untouched so a
+                # "<br> <br>" still resolves to a paragraph break.
+                if self.paragraph.text_nodes:
+                    self.paragraph.append_text(' ')
                 return
             text = self.paragraph.append_text(content)
 
