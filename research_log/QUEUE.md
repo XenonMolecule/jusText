@@ -57,9 +57,12 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
   flat). 0052's table-row-merge was the wrong tool; the real fix is code-table->pre in preprocess.
 - ~~roseindia <code>-block indentation~~ — SHIPPED (0056): multi-line <code> (br-gated) →
   verbatim <pre>, restores &nbsp; indentation (roseindia train Lev 0.873→0.900), aggregate flat.
-- **general line-per-<p>/<div> code** (still open) — code split across sibling <p>/<div> with
-  NO <code>/gutter signal joined \n\n vs gold \n; needs a code-likeness detector for bare
-  block runs (riskier). Deferred.
+- ~~general line-per-<p>/<div> code~~ — NOT TRACTABLE (investigated): only ~1 code/dev doc has
+  a bare-block code-like run, and a punctuation-ratio code-likeness heuristic FALSE-FIRES on
+  prose (flagged elinux headings "Example:"/"Reboot, check modules (lsmod):" as code). No safe
+  signal exists without an explicit <pre>/<code>/gutter tag; forcing it would regress prose.
+  Code-formatting structures with a clean signal are now all handled: <pre> (0021), code
+  tables (0055), <code> blocks (0056).
 
 ## Leaked MediaWiki list/indent markup (2026-06-18, investigated — NOT a clean lever)
 On `index.php?title=` source/diff-view wiki pages, raw wikitext line-start markup leaks:
