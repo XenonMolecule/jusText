@@ -166,6 +166,29 @@ def repair_replacement_chars(paragraphs):
         paragraph.text_nodes = ["".join(chars)]
 
 
+# Orphaned list markers (research log 0053). A `<li>` whose text is preceded by a `<br>`
+# (or a block child) gets the bullet/number marker and the item text split across a line
+# break: after whitespace-normalization the merged list paragraph reads ``- \ntext`` →
+# ``-\ntext``, orphaning the marker on its own line. The gold always joins ``- text`` on one
+# line. This regex reattaches a marker that sits alone on a line to the content on the next
+# line (289 occurrences across 46 dev docs). Matches only a line that is *exactly* a bullet
+# (`-`) or an ordered marker (`12.`), followed by a newline then non-space content.
+ORPHANED_MARKER_PATTERN = re.compile(r"(^|\n)(-|\d{1,3}\.)\n(?=\S)")
+
+
+def fix_orphaned_list_markers(paragraphs):
+    """In-place: rejoin a list marker orphaned on its own line with its item text."""
+    for paragraph in paragraphs:
+        if paragraph.verbatim:
+            continue
+        text = paragraph.text
+        if "\n" not in text:
+            continue
+        fixed = ORPHANED_MARKER_PATTERN.sub(r"\1\2 ", text)
+        if fixed != text:
+            paragraph.text_nodes = [fixed]
+
+
 # Unrendered MediaWiki markup (research log 0045). Some wiki pages (`index.php?title=...`
 # source views) leak raw wikitext into the output -- `[[Link|text]]`, `{{templates}}`,
 # `'''bold'''`, `== headings ==` -- which the gold renders to clean text. Strip the markup
@@ -965,6 +988,7 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         model.apply(paragraphs, stoplist)
 
     merge_uniform_table_rows(paragraphs)
+    fix_orphaned_list_markers(paragraphs)
 
     if fix_encoding:
         decode_double_entities(paragraphs)
