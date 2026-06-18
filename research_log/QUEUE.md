@@ -58,6 +58,16 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
   −0.13 via the dedup interaction. roseindia/dev is over-extraction (Q&A), not newline. The
   tractable half (keep the rows) shipped in 0051.
 
+## Leaked MediaWiki list/indent markup (2026-06-18, investigated — NOT a clean lever)
+On `index.php?title=` source/diff-view wiki pages, raw wikitext line-start markup leaks:
+`*`/`**` bullets, `:`/`::` indent, `#` numbered (meritbadge `:1. Show`, elinux Peek `* …`,
+openwetware `#…`). 0045 strips `[[`/`{{`/`'''`/`==` but not these. Tried stripping leading
+`:`/`;` (the subset gold consistently renders): net-negative — fired on only 1 doc and it was
+a REGRESSION (applecentral forum −0.0009, where leading `:` is legit "Re:"/quote), negligible
+gain on the wiki docs. Gold is inconsistent on the rest too: wikitravel KEEPS `*` bullets;
+thejapanesepage/openwetware DROP the bulleted section entirely (content-selection). So no
+gold-consistent strip exists. Confirmed gold-typography/content-selection wall.
+
 ## Methodology
 - When out of fix ideas: sample ~5 partial-F1 docs, look for a common error, fix it. This has
   repeatedly surfaced wins we'd deemed impossible (mojibake, spacing, br, emails).
