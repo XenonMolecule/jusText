@@ -89,3 +89,4 @@ table/dev: 0.0 → **0.449** (0009).
 - [0024 — markdown trigger classifier](0024-markdown-trigger.md) — NEGATIVE: gold bolding unpredictable (per-doc & per-span both learn "never bold")
 - [0025 — <br> → newline](0025-br-newline.md) — line structure for <br>-separated content; F1-neutral, Lev net-positive (quality)
 - [0026 — inline whitespace](0026-inline-whitespace.md) — keep space between inline elements; **general +0.0022 F1** + fixes mashed words
+- [0027 — angle-bracket emails](0027-angle-emails.md) — escape `<addr@host>` libxml2 ate as a tag; **forum +0.22 F1**, zero regression

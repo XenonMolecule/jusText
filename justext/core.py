@@ -90,6 +90,22 @@ def repair_mojibake(html_text):
     return _FTFY.fix_encoding(html_text)
 
 
+# Angle-bracket emails (research log 0027). Usenet/old-forum quoting writes the author as
+# ``"Joe" <joe@example.com> wrote:``. libxml2 treats ``<joe@example.com>`` as a bogus tag
+# and DROPS it -- losing the address and mashing the surrounding text. Escaping these to
+# ``&lt;...&gt;`` before parsing keeps them as text. The ``@`` before any space means it
+# can never be a real tag (real tags have a space before attributes), so this won't touch
+# ``<a href="mailto:x@y">``.
+ANGLE_EMAIL_PATTERN = re.compile(r"<([a-zA-Z][^<>\s]*@[^<>\s]*)>")
+
+
+def escape_angle_emails(html_text):
+    """Escape ``<addr@host>`` so the parser keeps it as text instead of a bogus tag."""
+    if not isinstance(html_text, unicode):
+        return html_text
+    return ANGLE_EMAIL_PATTERN.sub(r"&lt;\1&gt;", html_text)
+
+
 # Double-encoded HTML entities (research log 0023). lxml decodes entities once while
 # parsing; when the source was encoded twice (``&amp;amp;``) a literal ``&amp;`` survives
 # into the output. A second unescape pass on the extracted text repairs it. Skipped for
@@ -487,6 +503,7 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
     """
     if fix_encoding:
         html_text = repair_mojibake(html_text)
+        html_text = escape_angle_emails(html_text)
     dom = html_to_dom(html_text, default_encoding, encoding, enc_errors)
     dom = preprocessor(dom)
 
