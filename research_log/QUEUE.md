@@ -18,12 +18,12 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
   block-presence, which SAX can't know upfront. Options left: structural-class denylist
   (posts/nav/d1...; fragile) or, best, just improve forum coverage so these pages are handled
   (bypassing the list logic). Keep 0037 as-is (metric-neutral) until then.
-- **XenForo handler** — attempted (data-author + .messageContent), REVERTED: fired on only
-  2/71 train docs and regressed them F1 0.77->0.11 (garbage). Bugs: (1) message-container
-  detection wrong — most XenForo skins don't match `[data-author][.//messageContent]` as the
-  post block; (2) outermost-dedup direction inverted (kept innermost). Rework: find the real
-  per-post container across skins (like `_post_container`), validate on the 71 TRAIN docs as a
-  temp dev (user's method -- it correctly caught this breakage).
+- **XenForo handler** — 4th attempt NEGATIVE (0057). Container detection now SOLVED
+  (`*[class~=message][data-author]` fires on 69 train docs, vs 2 before), but body
+  `blockquote.messageText` UNDER-extracts (gold 3-4x larger, not just quotes) and the gold
+  marker format is inconsistent (talkbass `**user** (date)` vs physicsforums `[user] date`).
+  Net F1 -0.020 to -0.026 on the 69-doc temp-dev either quote strategy. STOP unless the
+  body-completeness problem is cracked.
 - **SMF handler** — SHIPPED (0046).  ~~ ATTEMPTED, defer: usernames+dates extract CORRECTLY across skins
   (arduino: psteve/pYro_65; adventurecycling: SlowAndSlower/staehpj1) via `_post_container` on
   `.poster`+`.post`, but the body (`.post`/`.inner`) includes signatures/"Logged"/quote chrome
