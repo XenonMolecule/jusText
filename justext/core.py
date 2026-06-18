@@ -538,25 +538,34 @@ def _marker_paragraph(text):
 
 
 def _qa_comments(post):
-    """(author, text) for each comment on a post, in document order."""
-    out = []
-    for comment in post.xpath('.//*[contains(@class,"comment-copy") or contains(@class,"comment-text")]'):
+    """(author, text) for each comment on a post, in document order, de-duplicated.
+
+    Comments are kept as one contiguous thread per post (never a scattered subset): a
+    later comment often builds on earlier ones, so dropping middle comments would break the
+    thread (user guidance, research log 0034).
+    """
+    out, seen = [], set()
+    for comment in post.xpath('.//*[contains(@class,"comment-copy")]'):
         text = comment.text_content().strip()
-        if len(text) <= 1:
+        key = re.sub(r"\s+", " ", text)
+        if len(text) <= 1 or key in seen:
             continue
+        seen.add(key)
         author = comment.getparent().xpath('.//*[contains(@class,"comment-user")]//text()')
         out.append((author[0].strip() if author else None, text))
     return out
 
 
-def stackexchange_paragraphs(dom, include_comments=False):
+def stackexchange_paragraphs(dom, include_comments=True):
     """Return role-prefixed Q&A paragraphs for a StackExchange page, or None if not one.
 
-    Comments are EXCLUDED by default: the gold includes them inconsistently (~50% of pages)
-    and the DOM holds far more (hidden/collapsed) than any page shows, so including them
-    hurts the benchmark. They are real content, though, so ``include_comments=True`` keeps
-    them (per post) for training-corpus generation -- a deliberate metric/corpus trade
-    (research log 0034).
+    Comments are INCLUDED by default as the full contiguous thread per post (research log
+    0034). The gold includes comments inconsistently (~50% of pages) with NO learnable
+    signal -- score, length, and displayed-vs-hidden all fail to separate kept from dropped
+    -- so matching the gold is impossible. Comments are real content (corrections, the
+    answer-in-a-comment), so the uniform principled policy is to keep the whole thread,
+    never a scattered subset (a later comment builds on earlier ones). Costs ~0.001 F1 on
+    general/dev. ``include_comments=False`` opts out for strict gold-matching benchmarking.
     """
     questions = dom.xpath('//div[@id="question"]')
     if not questions:
@@ -594,7 +603,7 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         max_heading_distance=MAX_HEADING_DISTANCE_DEFAULT, no_headings=NO_HEADINGS_DEFAULT,
         encoding=None, default_encoding=DEFAULT_ENCODING,
         enc_errors=DEFAULT_ENC_ERRORS, preprocessor=preprocessor, model=None,
-        fix_encoding=True, forum_qa=True, include_comments=False):
+        fix_encoding=True, forum_qa=True, include_comments=True):
     """
     Converts an HTML page into a list of classified paragraphs. Each paragraph
     is represented as instance of class ˙˙justext.paragraph.Paragraph˙˙.
@@ -610,9 +619,9 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
     is unaffected.
 
     If ``forum_qa`` is true (default) and the page is a StackExchange-engine Q&A page, it is
-    rewritten so each post's role + author precede its body (research log 0031). Comments are
-    excluded unless ``include_comments`` is set (research log 0034) -- excluding matches the
-    gold and the benchmark; including keeps them for training-corpus generation.
+    rewritten so each post's role + author precede its body (research log 0031). The full
+    comment thread is kept per post by default (``include_comments``, research log 0034);
+    set it false for strict gold-matching benchmarking.
     """
     if fix_encoding:
         html_text = repair_mojibake(html_text)
