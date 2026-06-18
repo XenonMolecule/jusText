@@ -8,9 +8,9 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
   handlers cover only 29. 58 are "other/unknown" (no engine signature). More engines flagged
   by user: SMF (arduino, adventurecycling), bbPress/WordPress (studiopress), phpBB-variant
   (spacefellowship). Conclusion: build the GENERAL detector.
-- **General forum detector** (0041 plan) — repeated user-attributed post blocks → role-to-front;
-  reuses `_post_container` + quote-strip. Would ALSO fix the `<ol>` misfire. "Huge win where
-  available" (user). Risk: non-forum false fires — needs a strong gate (>=3 user blocks).
+- **General forum detector** — ATTEMPTED & NEGATIVE (0043): false-fired on 52 non-forum docs
+  and regressed -0.34 even on real forums (no clean body selector). Not achievable with
+  heuristics. Per-engine handlers remain the only reliable path.
 - **`<ol>` misfire** (0041 plan) — structural lists (`<ol class="posts"/"d1">`) get numbered
   when a forum handler misses (forum.wehavelupus.com/showthread.php?9181). TRIED a block-aware
   rule (no marker if the <li> contains a block) -- REVERTED: it also broke the gist list,
