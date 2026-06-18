@@ -162,6 +162,32 @@ def repair_replacement_chars(paragraphs):
         paragraph.text_nodes = ["".join(chars)]
 
 
+# Unrendered MediaWiki markup (research log 0045). Some wiki pages (`index.php?title=...`
+# source views) leak raw wikitext into the output -- `[[Link|text]]`, `{{templates}}`,
+# `'''bold'''`, `== headings ==` -- which the gold renders to clean text. Strip the markup
+# from a text node only when it clearly contains wiki links/templates (`[[`/`{{`), so prose
+# with stray apostrophes is untouched. Skipped for verbatim/code paragraphs.
+def _clean_wiki_node(node):
+    for _ in range(3):
+        node = re.sub(r"\{\{[^{}]*\}\}", "", node)              # {{templates}} (nested)
+    node = re.sub(r"\[\[(?:[^\[\]|]*\|)?([^\[\]|]+)\]\]", r"\1", node)  # [[a|b]]->b, [[a]]->a
+    node = re.sub(r"\[(?:https?|ftp)://\S+\s+([^\]]+)\]", r"\1", node)  # [url text]->text
+    node = re.sub(r"'''''(.+?)'''''", r"\1", node)
+    node = re.sub(r"'''(.+?)'''", r"\1", node)
+    node = re.sub(r"''(.+?)''", r"\1", node)
+    return re.sub(r"(?m)^\s*=+\s*(.+?)\s*=+\s*$", r"\1", node)   # == heading ==
+
+
+def clean_wiki_markup(paragraphs):
+    """In-place: strip unrendered MediaWiki markup from non-verbatim paragraph text."""
+    for paragraph in paragraphs:
+        if paragraph.verbatim:
+            continue
+        for i, node in enumerate(paragraph.text_nodes):
+            if "[[" in node or "{{" in node:
+                paragraph.text_nodes[i] = _clean_wiki_node(node)
+
+
 class JustextError(Exception):
     "Base class for jusText exceptions."
 
@@ -790,5 +816,6 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
     if fix_encoding:
         decode_double_entities(paragraphs)
         repair_replacement_chars(paragraphs)
+        clean_wiki_markup(paragraphs)
 
     return paragraphs

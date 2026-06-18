@@ -38,7 +38,7 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
   the gold may include comments our extractor doesn't reach.
 
 ## Formatting / quality
-- **Wikia/infobox formatting** — harrypotter.wikia.com/wiki/Tom_Felton?oldid=826898; the gold
+- **Wikia/infobox formatting** (source-view markup now stripped, 0045; infobox layout still open) — harrypotter.wikia.com/wiki/Tom_Felton?oldid=826898; the gold
   formats the page (infobox/sections) much better than us. Queued.
 - **contentdm spacing** — olemiss/cgsc: handled inline-whitespace (0026) but check residual.
 - **roseindia code-line join** — `<p>`-per-line code joined with `\n\n` vs gold's `\n`.
