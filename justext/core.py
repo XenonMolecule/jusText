@@ -758,6 +758,49 @@ def phpbb_paragraphs(dom, include_comments=True):
     return _forum_thread_paragraphs(dom, posts)
 
 
+_SMF_DATE = re.compile(r"[A-Z][a-z]{2}\w*\s+\d{1,2},?\s+\d{4},?\s+\d{1,2}:\d{2}\s*(?:am|pm|AM|PM)")
+
+
+def smf_paragraphs(dom, include_comments=True):
+    """Role-prefixed paragraphs for an SMF (Simple Machines) forum thread, or None.
+
+    SMF posts are `div.post` (body in a nested `.inner` message div) paired with a sibling
+    `.poster` block; the post date sits in a header `.smalltext` (research log 0046). Body is
+    `.inner` (drops the signature/"Logged" chrome that wraps it); quotes are KEPT (SMF gold
+    keeps them). Author/date scoped to the post's own block via `_post_container`. Fires only
+    with >=2 posts that have a username.
+    """
+    bodies = dom.xpath('//div[contains(concat(" ", normalize-space(@class), " "), " post ")]')
+    if len(bodies) < 2:
+        return None
+    posts = []
+    for body in bodies:
+        others = [b for b in bodies if b is not body]
+        block = _post_container(body, others)
+        posters = block.xpath('.//*[contains(@class,"poster")]')
+        if not posters:
+            continue
+        names = posters[0].xpath('.//h4//text()|.//a//text()')
+        username = next((t.strip() for t in names if t.strip()), "")
+        if not username:
+            continue
+        inner = body.xpath('.//*[contains(@class,"inner")]')
+        body_el = inner[0] if inner else body
+        body_descendants = set(body_el.iter())
+        date = ""
+        for small in block.xpath('.//*[contains(@class,"smalltext")]'):
+            if small in body_descendants:
+                continue
+            match = _SMF_DATE.search(small.text_content())
+            if match:
+                date = _clean_forum_date(match.group())
+                break
+        body_paras = [p for p in ParagraphMaker.make_paragraphs(body_el) if p.text.strip()]
+        if body_paras:
+            posts.append((username, date, body_paras))
+    return _forum_thread_paragraphs(dom, posts)
+
+
 def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         length_high=LENGTH_HIGH_DEFAULT, stopwords_low=STOPWORDS_LOW_DEFAULT,
         stopwords_high=STOPWORDS_HIGH_DEFAULT, max_link_density=MAX_LINK_DENSITY_DEFAULT,
@@ -796,6 +839,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
             qa_paragraphs = vbulletin_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is None:
             qa_paragraphs = phpbb_paragraphs(dom, include_comments=include_comments)
+        if qa_paragraphs is None:
+            qa_paragraphs = smf_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is not None:
             if fix_encoding:
                 decode_double_entities(qa_paragraphs)

@@ -24,7 +24,7 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
   post block; (2) outermost-dedup direction inverted (kept innermost). Rework: find the real
   per-post container across skins (like `_post_container`), validate on the 71 TRAIN docs as a
   temp dev (user's method -- it correctly caught this breakage).
-- **SMF handler** — ATTEMPTED, defer: usernames+dates extract CORRECTLY across skins
+- **SMF handler** — SHIPPED (0046).  ~~ ATTEMPTED, defer: usernames+dates extract CORRECTLY across skins
   (arduino: psteve/pYro_65; adventurecycling: SlowAndSlower/staehpj1) via `_post_container` on
   `.poster`+`.post`, but the body (`.post`/`.inner`) includes signatures/"Logged"/quote chrome
   the baseline classifier drops -> regresses -0.05 on 8 dev docs. Needs a tighter body selector
