@@ -8,8 +8,12 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
   reuses `_post_container` + quote-strip. Would ALSO fix the `<ol>` misfire. "Huge win where
   available" (user). Risk: non-forum false fires — needs a strong gate (>=3 user blocks).
 - **`<ol>` misfire** (0041 plan) — structural lists (`<ol class="posts"/"d1">`) get numbered
-  when a forum handler misses (forum.wehavelupus.com/showthread.php?9181). Fix via general
-  forum detector OR a structural-list exclusion rule.
+  when a forum handler misses (forum.wehavelupus.com/showthread.php?9181). TRIED a block-aware
+  rule (no marker if the <li> contains a block) -- REVERTED: it also broke the gist list,
+  whose real items wrap text in <p>. The distinguisher is item SIZE (forum post = huge) not
+  block-presence, which SAX can't know upfront. Options left: structural-class denylist
+  (posts/nav/d1...; fragile) or, best, just improve forum coverage so these pages are handled
+  (bypassing the list logic). Keep 0037 as-is (metric-neutral) until then.
 - **XenForo handler** — attempted (data-author + .messageContent), REVERTED: fired on only
   2/71 train docs and regressed them F1 0.77->0.11 (garbage). Bugs: (1) message-container
   detection wrong — most XenForo skins don't match `[data-author][.//messageContent]` as the
