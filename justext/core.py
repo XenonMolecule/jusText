@@ -537,8 +537,27 @@ def _marker_paragraph(text):
     return paragraph
 
 
-def stackexchange_paragraphs(dom):
-    """Return role-prefixed Q&A paragraphs for a StackExchange page, or None if not one."""
+def _qa_comments(post):
+    """(author, text) for each comment on a post, in document order."""
+    out = []
+    for comment in post.xpath('.//*[contains(@class,"comment-copy") or contains(@class,"comment-text")]'):
+        text = comment.text_content().strip()
+        if len(text) <= 1:
+            continue
+        author = comment.getparent().xpath('.//*[contains(@class,"comment-user")]//text()')
+        out.append((author[0].strip() if author else None, text))
+    return out
+
+
+def stackexchange_paragraphs(dom, include_comments=False):
+    """Return role-prefixed Q&A paragraphs for a StackExchange page, or None if not one.
+
+    Comments are EXCLUDED by default: the gold includes them inconsistently (~50% of pages)
+    and the DOM holds far more (hidden/collapsed) than any page shows, so including them
+    hurts the benchmark. They are real content, though, so ``include_comments=True`` keeps
+    them (per post) for training-corpus generation -- a deliberate metric/corpus trade
+    (research log 0034).
+    """
     questions = dom.xpath('//div[@id="question"]')
     if not questions:
         return None
@@ -560,6 +579,12 @@ def stackexchange_paragraphs(dom):
                 if body.text.strip():
                     body.class_type = "good"
                     paragraphs.append(body)
+        if include_comments:
+            comments = _qa_comments(post)
+            if comments:
+                lines = "\n".join(
+                    ("- **%s:** %s" % (a, t) if a else "- " + t) for a, t in comments)
+                paragraphs.append(_marker_paragraph("**Comments**\n" + lines))
     return paragraphs
 
 
@@ -569,7 +594,7 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         max_heading_distance=MAX_HEADING_DISTANCE_DEFAULT, no_headings=NO_HEADINGS_DEFAULT,
         encoding=None, default_encoding=DEFAULT_ENCODING,
         enc_errors=DEFAULT_ENC_ERRORS, preprocessor=preprocessor, model=None,
-        fix_encoding=True, forum_qa=True):
+        fix_encoding=True, forum_qa=True, include_comments=False):
     """
     Converts an HTML page into a list of classified paragraphs. Each paragraph
     is represented as instance of class ˙˙justext.paragraph.Paragraph˙˙.
@@ -585,7 +610,9 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
     is unaffected.
 
     If ``forum_qa`` is true (default) and the page is a StackExchange-engine Q&A page, it is
-    rewritten so each post's role + author precede its body (research log 0031).
+    rewritten so each post's role + author precede its body (research log 0031). Comments are
+    excluded unless ``include_comments`` is set (research log 0034) -- excluding matches the
+    gold and the benchmark; including keeps them for training-corpus generation.
     """
     if fix_encoding:
         html_text = repair_mojibake(html_text)
@@ -594,7 +621,7 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
 
     # Q&A forums (StackExchange): rewrite role+author before each post body (0031).
     if forum_qa:
-        qa_paragraphs = stackexchange_paragraphs(dom)
+        qa_paragraphs = stackexchange_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is not None:
             if fix_encoding:
                 decode_double_entities(qa_paragraphs)
