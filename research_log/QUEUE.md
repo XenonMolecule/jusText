@@ -10,9 +10,12 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
 - **`<ol>` misfire** (0041 plan) — structural lists (`<ol class="posts"/"d1">`) get numbered
   when a forum handler misses (forum.wehavelupus.com/showthread.php?9181). Fix via general
   forum detector OR a structural-list exclusion rule.
-- **XenForo handler** — real XenForo (`.messageContent`+`.messageUserInfo`, e.g. talkbass) is
-  TRAIN-only; **0 dev targets** so unmeasurable on dev. Gate on `.messageContent` (not the
-  generic `data-author`, which kotaku/nytimes also have). Validate on train when built.
+- **XenForo handler** — attempted (data-author + .messageContent), REVERTED: fired on only
+  2/71 train docs and regressed them F1 0.77->0.11 (garbage). Bugs: (1) message-container
+  detection wrong — most XenForo skins don't match `[data-author][.//messageContent]` as the
+  post block; (2) outermost-dedup direction inverted (kept innermost). Rework: find the real
+  per-post container across skins (like `_post_container`), validate on the 71 TRAIN docs as a
+  temp dev (user's method -- it correctly caught this breakage).
 - **fastText router** — route pages to the right handler / the general one (needs big_train).
 
 ## Formatting / quality
