@@ -30,6 +30,11 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
   the baseline classifier drops -> regresses -0.05 on 8 dev docs. Needs a tighter body selector
   or per-post classification. Confirms: per-engine handlers only win with a CLEAN body element.
 - **wordpress.org/support** (bbPress) — user-flagged forum to check (topic/plugin-wp-pagenavi).
+- **vBulletin vB4 broadening** — TRIED & reverted: fixing _strip_quote_blocks to not empty
+  blockquote.postcontent bodies made vBulletin fire on vB4 skins (mmo-champion, wehavelupus)
+  with CORRECT usernames, but net-negative (general -0.0009, CODE -0.0146): vB4 gold KEEPS the
+  quoted text my quote-strip removes (mmo-champion 0.80->0.685). Gold-inconsistency-on-quotes
+  wall. Would need a per-doc keep/strip-quotes decision (no clean signal). wehavelupus ol-misfire persists.
 - **fastText router** — route pages to the right handler / the general one (needs big_train).
 
 - **Comment recall** — even with comments-on (0034), still missing valuable comments on
