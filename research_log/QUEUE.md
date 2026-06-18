@@ -61,3 +61,13 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
 ## Methodology
 - When out of fix ideas: sample ~5 partial-F1 docs, look for a common error, fix it. This has
   repeatedly surfaced wins we'd deemed impossible (mojibake, spacing, br, emails).
+
+## Low-Lev band scan (2026-06-18, post-0054)
+Scanned 69 high-F1/low-Lev general docs for the most common pred-only short lines. All ruled
+out as per-doc, not systemic: `>` lines = email quote-prefixes the gold KEEPS (mailing-list
+pages — gold often has MORE `>` lines than us, i.e. we under-extract quotes; gold-inconsistent
+so not a clean lever); `none`/`pass` = legit cells in one fedora test-results table;
+`- Get more examples` = one oxforddictionaries page. Residual low-Lev is now gold markdown
+typography (`**bold**`, `  \n` hard-breaks) + email-quote handling — both prior walls.
+Possible future lever: mailing-list quote under-extraction (patchwork gold 84 `>` vs our 22;
+ws-policy 129 vs 83) — but gold inconsistency (trauma.org keeps 0) makes it risky.
