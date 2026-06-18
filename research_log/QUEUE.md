@@ -52,8 +52,11 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
 - **Wikia/infobox formatting** (source-view markup now stripped, 0045; infobox layout still open) — harrypotter.wikia.com/wiki/Tom_Felton?oldid=826898; the gold
   formats the page (infobox/sections) much better than us. Queued.
 - **contentdm spacing** — olemiss/cgsc: handled inline-whitespace (0026) but check residual.
-- **roseindia code-line join** — `<p>`-per-line code joined with `\n\n` vs gold's `\n`.
-- **gist code newlines** (0033) — code outside `<pre>` line-per-div; list half done (0037).
+- ~~roseindia / gist code-line join~~ — CLOSED (0052 NEGATIVE): merging kept table/code rows
+  into one `\n`-joined block has no Lev upside (Exeter cell-separators are U+202F gold-
+  typography; gist doesn't qualify + loses indentation upstream) and regressed peakbagger
+  −0.13 via the dedup interaction. roseindia/dev is over-extraction (Q&A), not newline. The
+  tractable half (keep the rows) shipped in 0051.
 
 ## Methodology
 - When out of fix ideas: sample ~5 partial-F1 docs, look for a common error, fix it. This has

@@ -96,3 +96,4 @@ table/dev: 0.0 → **0.449** (0009).
 - 0031–0049 — quality/transform fixes & forum role-transforms (see individual files): mojibake/entity/FFFD/wiki/code-dedup/spacing/br/email repairs; forum engines SE/vBulletin/phpBB/SMF/bbPress; `<ol>` structural-skip (0049). General/dev → **0.8850 / 0.8205**.
 - [0050 — table-row cohesion](0050-table-row-cohesion.md) — **NEGATIVE**: blanket/digit-gated row cohesion regresses real general docs
 - [0051 — uniform data-table rows](0051-uniform-table-rows.md) — **WIN**: keep whole table when rows are uniform (≥8, low length-CV, short cells) & some kept; **table 0.388→0.710, general 0.8850→0.8852, zero regression**
+- [0052 — code/table newline join](0052-code-newline-join.md) — **NEGATIVE**: re-joining kept rows into a `\n`-block has no Lev upside (U+202F gold cell-typography) and regressed peakbagger −0.13 via dedup; reverted
