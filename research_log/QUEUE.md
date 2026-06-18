@@ -4,6 +4,10 @@ Running backlog of fixes/ideas flagged but not yet done. Newest noted as they co
 See individual `NNNN-*.md` logs for shipped/attempted work.
 
 ## Forum (active focus)
+- **Forum audit (0042)**: gold reorders username-to-front on 111/1000 dev docs; per-engine
+  handlers cover only 29. 58 are "other/unknown" (no engine signature). More engines flagged
+  by user: SMF (arduino, adventurecycling), bbPress/WordPress (studiopress), phpBB-variant
+  (spacefellowship). Conclusion: build the GENERAL detector.
 - **General forum detector** (0041 plan) — repeated user-attributed post blocks → role-to-front;
   reuses `_post_container` + quote-strip. Would ALSO fix the `<ol>` misfire. "Huge win where
   available" (user). Risk: non-forum false fires — needs a strong gate (>=3 user blocks).
