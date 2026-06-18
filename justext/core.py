@@ -758,6 +758,36 @@ def phpbb_paragraphs(dom, include_comments=True):
     return _forum_thread_paragraphs(dom, posts)
 
 
+def bbpress_paragraphs(dom, include_comments=True):
+    """Role-prefixed paragraphs for a bbPress (WordPress) forum thread, or None.
+
+    bbPress has clean per-post selectors: body `.bbp-reply-content`/`.bbp-topic-content`,
+    author in the post's `.bbp-author-name` (research log 0048). Reuses the shared assembler
+    + quote-strip. Fires only with >=2 posts that have an author.
+    """
+    bodies = dom.xpath('//*[contains(@class,"bbp-reply-content") or contains(@class,"bbp-topic-content")]')
+    if len(bodies) < 2:
+        return None
+    posts = []
+    for body in bodies:
+        author, ancestor = "", body
+        for _ in range(6):
+            ancestor = ancestor.getparent()
+            if ancestor is None:
+                break
+            names = ancestor.xpath('.//*[contains(@class,"bbp-author-name")]//text()')
+            if names:
+                author = names[0].strip()
+                break
+        if not author:
+            continue
+        body_paras = [p for p in ParagraphMaker.make_paragraphs(_strip_quote_blocks(body))
+                      if p.text.strip()]
+        if body_paras:
+            posts.append((author, "", body_paras))
+    return _forum_thread_paragraphs(dom, posts)
+
+
 _SMF_DATE = re.compile(r"[A-Z][a-z]{2}\w*\s+\d{1,2},?\s+\d{4},?\s+\d{1,2}:\d{2}\s*(?:am|pm|AM|PM)")
 
 
@@ -841,6 +871,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
             qa_paragraphs = phpbb_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is None:
             qa_paragraphs = smf_paragraphs(dom, include_comments=include_comments)
+        if qa_paragraphs is None:
+            qa_paragraphs = bbpress_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is not None:
             if fix_encoding:
                 decode_double_entities(qa_paragraphs)

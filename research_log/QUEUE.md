@@ -29,7 +29,7 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
   `.poster`+`.post`, but the body (`.post`/`.inner`) includes signatures/"Logged"/quote chrome
   the baseline classifier drops -> regresses -0.05 on 8 dev docs. Needs a tighter body selector
   or per-post classification. Confirms: per-engine handlers only win with a CLEAN body element.
-- **wordpress.org/support** (bbPress) — user-flagged forum to check (topic/plugin-wp-pagenavi).
+- ~~bbPress~~ SHIPPED (0048): .bbp-reply-content + .bbp-author-name; train +0.0229.
 - **vBulletin vB4 broadening** — TRIED & reverted: fixing _strip_quote_blocks to not empty
   blockquote.postcontent bodies made vBulletin fire on vB4 skins (mmo-champion, wehavelupus)
   with CORRECT usernames, but net-negative (general -0.0009, CODE -0.0146): vB4 gold KEEPS the
