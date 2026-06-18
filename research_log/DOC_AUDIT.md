@@ -25,6 +25,18 @@ significant regressions. One row per doc: idx, url, mistake, fix/verdict.
 | 18-31 | 48,120,204,258,288,324,336,342,360,378,384,414,462,492 | (batch) | 0.5-0.82 | 7 over-extract(comments/boilerplate), 5 content-selection, 1 FFFD(fixunix lossy), 1 under-extract | gold-limited majority; artifacts already handled |
 | 32 | table/0 | discovernorthcounty property | 0.43 | selects wrong block (area-chooser nav) instead of property-detail table | content-selection (wrong block) |
 | 33 | table/1 | exetercity-mad league table | 0.35 | right rows; classifier keeps 5/24 (row-cohesion); gold uses U+202F+`  \n` | tried row-cohesion (0050) NEGATIVE; rest gold-typography |
+| 34 | twincities | bombings-kill-12 (AP news) | 0.58 | pred 2.5× gold; gold TRUNCATES article mid-sentence; ours is the complete article | gold under-extraction (ours more correct) |
+| 35 | demerarawaves | speaker ruling (news) | 0.64 | pred 2× gold; gold truncates article body we correctly keep | gold under-extraction |
+| 36 | musicradar | 10 guitar-hero hobbies | 0.58 | pred 2× gold; gold truncates article body | gold under-extraction |
+| 37 | pjcockrell | 9 ways to pray (blog) | 0.60 | pred 2× gold; tail = "recent comments" sidebar widget | mild over-extract (widget); blanket-drop forbidden |
+
+### Partial-F1 band re-sample (2026-06-18, post-0050)
+Sampled the 0.55–0.78 general band (106 docs) by `pred/gold` char ratio. The ~2× over-
+extractors are **not duplication** (no repeated paragraphs) — they are **gold truncation**:
+the teacher arbitrarily cuts long articles mid-sentence (twincities cut mid-word; ours ends
+cleanly). 3/4 sampled are gold-under-extraction where our extraction is *more* complete and
+correct; 1/4 a tiny boilerplate widget. Reconfirms the frontier is gold-limited — closing
+the gap would require dropping correct content (explicitly off-limits).
 
 ## Verdict (30 docs analyzed)
 
