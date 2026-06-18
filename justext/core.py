@@ -843,6 +843,68 @@ def smf_paragraphs(dom, include_comments=True):
     return _forum_thread_paragraphs(dom, posts)
 
 
+def _table_xpath_key(xpath):
+    """Return the xpath prefix up to and including the innermost ``table[N]`` segment,
+    or None if the path is not inside a table. Used to group sibling table rows."""
+    segs = xpath.split("/")
+    last_table = None
+    for i, s in enumerate(segs):
+        if s.startswith("table["):
+            last_table = i
+    return "/".join(segs[: last_table + 1]) if last_table is not None else None
+
+
+def merge_uniform_table_rows(paragraphs, min_rows=8, min_kept=2, max_link_density=0.6,
+        max_cv=0.4, max_median_len=160):
+    """Keep ALL rows of a *uniform data table* when the classifier kept some but dropped
+    others -- those drops are near-certainly noise.
+
+    A learned/heuristic classifier scores each table row independently, so on a long
+    standings/stats/spec table (rows that are short and near-identical) it keeps a few rows
+    and drops structurally-identical siblings essentially at random -- catastrophic for a
+    table that IS page content (research log 0051). We detect that signature and promote the
+    whole table:
+
+    * the table has >= ``min_rows`` rows that aren't link-heavy (real data, not a nav table),
+    * the classifier already kept >= ``min_kept`` of them (the table holds real content),
+    * the rows are *uniform*: low length coefficient-of-variation (``max_cv``) and a small
+      median length (``max_median_len``) -- i.e. data cells, NOT the long, high-variance rows
+      of a forum/layout table (which must be left to per-row classification).
+
+    Net-positive on its own merits: general/dev +0.0002 (touched docs net-positive), table
+    +0.32. Operates on ``class_type`` so it runs after classification (model or heuristic).
+    """
+    groups = {}
+    for p in paragraphs:
+        if "tr" not in p.dom_path.lower().split("."):
+            continue
+        if not p.text.strip():
+            continue
+        key = _table_xpath_key(p.xpath)
+        if key is None:
+            continue
+        groups.setdefault(key, []).append(p)
+
+    for rows in groups.values():
+        data = [p for p in rows if p.links_density() < max_link_density]
+        if len(data) < min_rows:
+            continue
+        if sum(1 for p in data if p.class_type == "good") < min_kept:
+            continue
+        lengths = [len(p.text) for p in data]
+        mean_len = sum(lengths) / len(lengths)
+        if not mean_len:
+            continue
+        median_len = sorted(lengths)[len(lengths) // 2]
+        if median_len > max_median_len:
+            continue  # prose rows (forum posts), not data cells
+        variance = sum((l - mean_len) ** 2 for l in lengths) / len(lengths)
+        if (variance ** 0.5) / mean_len > max_cv:
+            continue  # non-uniform rows -- not a data table
+        for p in data:
+            p.class_type = "good"
+
+
 def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         length_high=LENGTH_HIGH_DEFAULT, stopwords_low=STOPWORDS_LOW_DEFAULT,
         stopwords_high=STOPWORDS_HIGH_DEFAULT, max_link_density=MAX_LINK_DENSITY_DEFAULT,
@@ -901,6 +963,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
 
     if model is not None:
         model.apply(paragraphs, stoplist)
+
+    merge_uniform_table_rows(paragraphs)
 
     if fix_encoding:
         decode_double_entities(paragraphs)

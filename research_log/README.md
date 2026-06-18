@@ -94,4 +94,5 @@ table/dev: 0.0 → **0.449** (0009).
 - [0029 — U+FFFD repair table](0029-fffd-repair.md) — context→char infill for replacement chars; quality fix, zero regression
 - [0030 — dedup quote-normalize + containment](0030-dedup-quotes-containment.md) — **general +0.0005 F1 / +0.0006 Lev**; kills encoding-variant & teaser dupes
 - 0031–0049 — quality/transform fixes & forum role-transforms (see individual files): mojibake/entity/FFFD/wiki/code-dedup/spacing/br/email repairs; forum engines SE/vBulletin/phpBB/SMF/bbPress; `<ol>` structural-skip (0049). General/dev → **0.8850 / 0.8205**.
-- [0050 — table-row cohesion](0050-table-row-cohesion.md) — **NEGATIVE**: keeping all table rows regresses real general docs (table dataset is gold/content-selection-limited, not a row-cohesion bug)
+- [0050 — table-row cohesion](0050-table-row-cohesion.md) — **NEGATIVE**: blanket/digit-gated row cohesion regresses real general docs
+- [0051 — uniform data-table rows](0051-uniform-table-rows.md) — **WIN**: keep whole table when rows are uniform (≥8, low length-CV, short cells) & some kept; **table 0.388→0.710, general 0.8850→0.8852, zero regression**

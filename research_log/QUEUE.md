@@ -42,10 +42,11 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
   Check whether hidden/collapsed comments (beyond the displayed `.comment-copy`) are captured;
   the gold may include comments our extractor doesn't reach.
 
-- **Table-row cohesion** — ATTEMPTED & NEGATIVE (0050): keeping all rows of a table when
-  several are kept regresses general (blanket −0.0030; digit-gated flat-aggregate but all 19
-  touched general docs net-negative, keeping numeric spec/stat rows the gold drops). Table
-  dataset (F1 0.388) is gold/content-selection-limited, not a row-cohesion bug. Not a lever.
+- ~~Table-row cohesion~~ — 0050 NEGATIVE (blanket/digit-gated), then **0051 WIN**: gate on
+  row UNIFORMITY (≥8 rows, length-CV ≤0.4, median cell ≤160 chars, ≥2 already kept) keeps
+  whole data tables without firing on forum/layout tables. table 0.388→0.710, general
+  0.8850→0.8852, zero regression. The classifier was dropping uniform data-table rows at
+  random (user-flagged); `merge_uniform_table_rows` fixes it.
 
 ## Formatting / quality
 - **Wikia/infobox formatting** (source-view markup now stripped, 0045; infobox layout still open) — harrypotter.wikia.com/wiki/Tom_Felton?oldid=826898; the gold
