@@ -187,16 +187,42 @@ class ParagraphClassifier:
 
     @staticmethod
     def _dedup_kept(paragraphs):
-        """Mark later near-duplicate kept paragraphs as boilerplate (in document order)."""
+        """Mark later near-duplicate kept paragraphs as boilerplate (in document order).
+
+        Comparison normalises curly/straight quotes and drops U+FFFD so the same text in
+        different encodings still matches (research log 0030 -- a page that repeats its
+        intro with curly vs straight apostrophes was kept twice). Also drops a substantial
+        paragraph that is near-exactly *contained* in an earlier, longer kept one (teaser /
+        summary excerpts), which the equal-length ratio test misses.
+        """
         from rapidfuzz import fuzz  # lazy
+
+        def norm(text):
+            text = _WS.sub(" ", text).strip().lower()
+            for q in "’‘‛":
+                text = text.replace(q, "'")
+            for q in "“”„":
+                text = text.replace(q, '"')
+            return text.replace("�", "")
+
         seen = []
         for p in paragraphs:
             if p.class_type != "good":
                 continue
-            norm = _WS.sub(" ", p.text).strip().lower()
-            if len(norm) < 12:  # keep short lines (could be distinct labels/headers)
+            n = norm(p.text)
+            if len(n) < 12:  # keep short lines (could be distinct labels/headers)
                 continue
-            if any(norm == s or fuzz.ratio(norm, s) >= 97 for s in seen):
+            dup = False
+            for s in seen:
+                if n == s or fuzz.ratio(n, s) >= 97:
+                    dup = True
+                    break
+                # containment: a long paragraph that is a near-exact substring of an
+                # earlier, longer kept one (a repeated teaser/excerpt).
+                if len(n) >= 40 and len(s) > len(n) and fuzz.partial_ratio(n, s) >= 98:
+                    dup = True
+                    break
+            if dup:
                 p.class_type = "bad"
             else:
-                seen.append(norm)
+                seen.append(n)

@@ -92,3 +92,4 @@ table/dev: 0.0 → **0.449** (0009).
 - [0027 — angle-bracket emails](0027-angle-emails.md) — escape `<addr@host>` libxml2 ate as a tag; **forum +0.22 F1**, zero regression
 - [0028 — PLANNED forum quotes](0028-PLAN-forum-quotes.md) — reply-quote dedup (deprioritized: jusText > gold on the shared example)
 - [0029 — U+FFFD repair table](0029-fffd-repair.md) — context→char infill for replacement chars; quality fix, zero regression
+- [0030 — dedup quote-normalize + containment](0030-dedup-quotes-containment.md) — **general +0.0005 F1 / +0.0006 Lev**; kills encoding-variant & teaser dupes
