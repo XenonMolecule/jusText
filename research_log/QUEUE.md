@@ -18,12 +18,12 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
   block-presence, which SAX can't know upfront. Options left: structural-class denylist
   (posts/nav/d1...; fragile) or, best, just improve forum coverage so these pages are handled
   (bypassing the list logic). Keep 0037 as-is (metric-neutral) until then.
-- **XenForo handler** — 4th attempt NEGATIVE (0057). Container detection now SOLVED
-  (`*[class~=message][data-author]` fires on 69 train docs, vs 2 before), but body
-  `blockquote.messageText` UNDER-extracts (gold 3-4x larger, not just quotes) and the gold
-  marker format is inconsistent (talkbass `**user** (date)` vs physicsforums `[user] date`).
-  Net F1 -0.020 to -0.026 on the 69-doc temp-dev either quote strategy. STOP unless the
-  body-completeness problem is cracked.
+- **XenForo handler** — SHIPPED (0058, reverses 0057). The 0057 "body under-extracts"
+  diagnosis was wrong: `blockquote.messageText` → `ParagraphMaker` captures the full body;
+  the real missing piece was the **time** (in the `.DateTime` `title` attr, not the visible
+  text). With time recovery + strip-quotes it's train +0.74 F1 / +1.11 Lev (39 wins), dev
+  +0.23, general dev +0.0002/+0.0004, 4 datasets flat. One known loss: howtoforge
+  pasted-logs-in-quote (gold keeps; not cheaply gateable).
 - **SMF handler** — SHIPPED (0046).  ~~ ATTEMPTED, defer: usernames+dates extract CORRECTLY across skins
   (arduino: psteve/pYro_65; adventurecycling: SlowAndSlower/staehpj1) via `_post_container` on
   `.poster`+`.post`, but the body (`.post`/`.inner`) includes signatures/"Logged"/quote chrome

@@ -967,6 +967,61 @@ def smf_paragraphs(dom, include_comments=True):
     return _forum_thread_paragraphs(dom, posts)
 
 
+# XenForo's full date+time lives in the DateTime element's ``title`` ("Dec 31, 2009 at
+# 7:49 AM"); the visible text is only the day. We pull the title and drop the " at " so the
+# marker carries the time the gold keeps.
+_XENFORO_DATE = re.compile(
+    r"[A-Z][a-z]{2}\w*\s+\d{1,2},?\s+\d{4}(?:,?\s+\d{1,2}:\d{2}\s*(?:am|pm|AM|PM))?")
+
+
+def xenforo_paragraphs(dom, include_comments=True):
+    """Role-prefixed paragraphs for a XenForo forum thread, or None if not one.
+
+    XenForo posts are ``blockquote.messageText`` bodies; the author is the post block's
+    ``data-author`` (falling back to the ``.messageUserBlock`` username link) and the
+    date+time is in a ``.DateTime`` element's ``title`` attribute (research log 0058).
+    Reuses the shared assembler + quote-strip: the gold drops reply-quotes (keeping them
+    regresses train by 1.6 F1), so quotes are stripped even though one doc that pastes its
+    own logs into a quote loses that content -- a quote-keep policy can't tell the two apart
+    (the lost content isn't concentrated in a single quote) and costs far more than it saves.
+    Author/date scoped to the post's own block via ``_post_container``. Fires only with >=2
+    posts that have an author.
+    """
+    bodies = dom.xpath('//blockquote[contains(concat(" ", @class, " "), " messageText ")]')
+    if len(bodies) < 2:
+        return None
+    posts = []
+    for body in bodies:
+        others = [b for b in bodies if b is not body]
+        block = _post_container(body, others)
+        author, anc = "", block
+        for _ in range(6):
+            if anc is None:
+                break
+            if anc.get("data-author"):
+                author = anc.get("data-author").strip()
+                break
+            anc = anc.getparent()
+        if not author:
+            names = block.xpath('.//*[contains(@class,"messageUserBlock")]//a//text()')
+            author = next((t.strip() for t in names if t.strip()), "")
+        if not author:
+            continue
+        date = ""
+        for dt in block.xpath('.//*[contains(@class,"DateTime")]'):
+            raw = re.sub(r"\s+at\s+", " ",
+                         re.sub(r"\s+", " ", dt.get("title") or dt.text_content()))
+            match = _XENFORO_DATE.search(raw.strip())
+            if match:
+                date = _clean_forum_date(match.group())
+                break
+        body_paras = [p for p in ParagraphMaker.make_paragraphs(_strip_quote_blocks(body))
+                      if p.text.strip()]
+        if body_paras:
+            posts.append((author, date, body_paras))
+    return _forum_thread_paragraphs(dom, posts)
+
+
 def _table_xpath_key(xpath):
     """Return the xpath prefix up to and including the innermost ``table[N]`` segment,
     or None if the path is not inside a table. Used to group sibling table rows."""
@@ -1071,6 +1126,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
             qa_paragraphs = smf_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is None:
             qa_paragraphs = bbpress_paragraphs(dom, include_comments=include_comments)
+        if qa_paragraphs is None:
+            qa_paragraphs = xenforo_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is not None:
             if fix_encoding:
                 decode_double_entities(qa_paragraphs)

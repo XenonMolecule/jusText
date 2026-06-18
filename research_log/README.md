@@ -102,3 +102,4 @@ table/dev: 0.0 → **0.449** (0009).
 - [0055 — code tables → <pre>](0055-code-table-pre.md) — **code-formatting win**: GitHub/gist line-numbered code tables → verbatim <pre>; indentation+single-newline (gist Lev 0.679→0.726), aggregate flat
 - [0056 — code blocks → <pre>](0056-code-block-pre.md) — **code-formatting win**: multi-line <code> (br-gated) → verbatim <pre>, restores &nbsp; indentation (roseindia Lev 0.873→0.900); aggregate flat, no real regression
 - [0057 — XenForo 4th attempt](0057-xenforo-4th-attempt.md) — **NEGATIVE**: container detection solved (fires 69 train docs) but body under-extracts 3-4x + gold marker format inconsistent; net −0.02 F1, not shipped
+- [0058 — XenForo SHIPPED](0058-xenforo-shipped.md) — **reverses 0057**: title-attr time recovery + full `blockquote.messageText` body flips it to train +0.74 F1 (39 wins); user-flagged droidforums k9 thread 0.934→0.994; general dev +0.0002/+0.0004, 4 datasets flat; strip-quotes (keep craters −1.6)
