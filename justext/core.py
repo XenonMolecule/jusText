@@ -9,6 +9,7 @@ This software is licensed as described in the file LICENSE.rst.
 from __future__ import absolute_import
 from __future__ import division, print_function, unicode_literals
 
+import copy
 import re
 import lxml.html
 import lxml.sax
@@ -620,6 +621,75 @@ def stackexchange_paragraphs(dom, include_comments=True):
     return paragraphs
 
 
+def _strip_quote_blocks(element):
+    """Deep-copy *element* with vBulletin/bbcode quote blocks removed (keeps code)."""
+    element = copy.deepcopy(element)
+    for quote in element.xpath('.//*[contains(@class,"quote")] | .//blockquote'):
+        parent = quote.getparent()
+        if parent is not None:
+            parent.remove(quote)
+    return element
+
+
+def _post_container(body, others):
+    """Largest ancestor of *body* that contains none of the *others* post bodies.
+
+    Scopes a post to its own block across vBulletin skins, so the author/date are read from
+    THIS post's header -- not a high shared ancestor's first user (research log 0039, which
+    fixed the 0038 misattribution bug).
+    """
+    container = body
+    while container.getparent() is not None:
+        parent = container.getparent()
+        if any(parent in o.iterancestors() for o in others):
+            return container
+        container = parent
+    return container
+
+
+def vbulletin_paragraphs(dom, include_comments=True):
+    """Return role-prefixed paragraphs for a vBulletin forum thread, or None if not one.
+
+    Like the SE handler (0031) but for vBulletin's `#post_message_N` bodies: brings each
+    poster's name + date to the front -- `**username** (date)` -- in post order (research
+    log 0039). The gold applies this reorder to every forum thread (in inconsistent formats),
+    so this matches the spirit, a deliberate data-over-metric call. Per-post author/date are
+    read from the post's own block (`_post_container`); embedded "Originally Posted by..."
+    quote blocks are stripped so quoting posts aren't duplicated. Fires only when >=2 posts
+    have a username (else falls back to the normal path)."""
+    bodies = dom.xpath('//*[starts-with(@id,"post_message_")]')
+    if len(bodies) < 2:
+        return None
+    posts = []
+    for body_el in bodies:
+        others = [b for b in bodies if b is not body_el]
+        container = _post_container(body_el, others)
+        users = container.xpath('.//a[contains(@class,"username")]')
+        username = users[0].text_content().strip() if users else ""
+        if not username:
+            continue
+        dates = container.xpath('.//*[contains(@class,"date")]//text()')
+        date = re.sub(r"(\d+)(st|nd|rd|th)\b", r"\1",
+                      " ".join(d.strip() for d in dates if d.strip())).strip().strip(",")
+        body_paras = [p for p in ParagraphMaker.make_paragraphs(_strip_quote_blocks(body_el))
+                      if p.text.strip()]
+        if body_paras:
+            posts.append((username, date, body_paras))
+    if len(posts) < 2:
+        return None
+    paragraphs = []
+    title = dom.xpath('//h1//text()')
+    if title and title[0].strip():
+        paragraphs.append(_marker_paragraph(title[0].strip()))
+    for username, date, body_paras in posts:
+        marker = "**%s** (%s)" % (username, date) if date else "**%s**" % username
+        paragraphs.append(_marker_paragraph(marker))
+        for body in body_paras:
+            body.class_type = "good"
+            paragraphs.append(body)
+    return paragraphs
+
+
 def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         length_high=LENGTH_HIGH_DEFAULT, stopwords_low=STOPWORDS_LOW_DEFAULT,
         stopwords_high=STOPWORDS_HIGH_DEFAULT, max_link_density=MAX_LINK_DENSITY_DEFAULT,
@@ -654,6 +724,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
     # Q&A forums (StackExchange): rewrite role+author before each post body (0031).
     if forum_qa:
         qa_paragraphs = stackexchange_paragraphs(dom, include_comments=include_comments)
+        if qa_paragraphs is None:
+            qa_paragraphs = vbulletin_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is not None:
             if fix_encoding:
                 decode_double_entities(qa_paragraphs)
