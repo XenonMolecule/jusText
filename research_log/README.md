@@ -64,7 +64,7 @@ Net effect in one line.
 ## Index
 
 general/dev F1: 0.762 (baseline) → 0.849 (0009) → 0.870 (0016 fastText) → **0.876** (0018 +dedup). Lev: 0.682 → **0.808**.
-**Current best (ftstack+dedup+neighbor):** general dev 0.880/0.814, train 0.880/0.816 | code 0.837 | science 0.989 | math 0.828 | table 0.399*. Target 0.90/0.85.  (*table 2-doc noise)
+**Current best (ftstack + quality/transform fixes 0021-0031):** general dev **0.886/0.821** | code 0.842 | science 0.989 | math 0.820 | table 0.388*. Target 0.90/0.85.  (*table/math 2-doc noise)
 table/dev: 0.0 → **0.449** (0009).
 
 - [0001 — Baseline (jusText v3.0.2)](0001-baseline.md) — general 0.762/0.682

@@ -511,13 +511,65 @@ def revise_paragraph_classification(paragraphs, max_heading_distance=MAX_HEADING
             j += 1
 
 
+# Q&A role transform (research log 0031). StackExchange-engine pages (stackoverflow,
+# superuser, *.stackexchange.com, ...) are detected by their DOM signature and rewritten so
+# each post's role + author appears BEFORE its body -- "**Question (user)**", "**Answer
+# (user)**" -- in post order, matching the gold. This is the main transformation the gold
+# applies to forum content. Bodies are run back through ParagraphMaker so they inherit the
+# code-verbatim / <br> / list handling. Comments are excluded (the gold mostly omits them).
+def _qa_author(post):
+    """Best-effort post author: the owner signature, else the last user-details link."""
+    for xpath in ('.//*[contains(@class,"owner")]//*[contains(@class,"user-details")]//a',
+                  './/*[contains(@class,"user-details")]//a'):
+        links = post.xpath(xpath)
+        if links:
+            name = links[-1].text_content().strip()
+            if name:
+                return name
+    return None
+
+
+def _marker_paragraph(text):
+    """A synthetic kept paragraph carrying a literal role marker / title."""
+    paragraph = Paragraph(PathInfo())
+    paragraph.append_text(text)
+    paragraph.class_type = "good"
+    return paragraph
+
+
+def stackexchange_paragraphs(dom):
+    """Return role-prefixed Q&A paragraphs for a StackExchange page, or None if not one."""
+    questions = dom.xpath('//div[@id="question"]')
+    if not questions:
+        return None
+    paragraphs = []
+    title = dom.xpath('//*[contains(@class,"question-hyperlink")]//text()')
+    if not title:
+        title = dom.xpath('//h1//text()')
+    if title:
+        paragraphs.append(_marker_paragraph(title[0].strip()))
+    posts = [("Question", questions[0])]
+    posts += [("Answer", a) for a in dom.xpath('//div[starts-with(@id,"answer-")]')]
+    for role, post in posts:
+        author = _qa_author(post)
+        paragraphs.append(_marker_paragraph(
+            "**%s (%s)**" % (role, author) if author else "**%s**" % role))
+        bodies = post.xpath('.//*[contains(@class,"post-text") or @itemprop="text"]')
+        if bodies:
+            for body in ParagraphMaker.make_paragraphs(bodies[0]):
+                if body.text.strip():
+                    body.class_type = "good"
+                    paragraphs.append(body)
+    return paragraphs
+
+
 def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         length_high=LENGTH_HIGH_DEFAULT, stopwords_low=STOPWORDS_LOW_DEFAULT,
         stopwords_high=STOPWORDS_HIGH_DEFAULT, max_link_density=MAX_LINK_DENSITY_DEFAULT,
         max_heading_distance=MAX_HEADING_DISTANCE_DEFAULT, no_headings=NO_HEADINGS_DEFAULT,
         encoding=None, default_encoding=DEFAULT_ENCODING,
         enc_errors=DEFAULT_ENC_ERRORS, preprocessor=preprocessor, model=None,
-        fix_encoding=True):
+        fix_encoding=True, forum_qa=True):
     """
     Converts an HTML page into a list of classified paragraphs. Each paragraph
     is represented as instance of class ˙˙justext.paragraph.Paragraph˙˙.
@@ -531,11 +583,24 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
     requires the optional ``ftfy`` dependency, no-op without it) and double-encoded HTML
     entities surviving into the output (research log 0023). Both are gated, so clean input
     is unaffected.
+
+    If ``forum_qa`` is true (default) and the page is a StackExchange-engine Q&A page, it is
+    rewritten so each post's role + author precede its body (research log 0031).
     """
     if fix_encoding:
         html_text = repair_mojibake(html_text)
         html_text = escape_angle_emails(html_text)
     dom = html_to_dom(html_text, default_encoding, encoding, enc_errors)
+
+    # Q&A forums (StackExchange): rewrite role+author before each post body (0031).
+    if forum_qa:
+        qa_paragraphs = stackexchange_paragraphs(dom)
+        if qa_paragraphs is not None:
+            if fix_encoding:
+                decode_double_entities(qa_paragraphs)
+                repair_replacement_chars(qa_paragraphs)
+            return qa_paragraphs
+
     dom = preprocessor(dom)
 
     paragraphs = ParagraphMaker.make_paragraphs(dom)
