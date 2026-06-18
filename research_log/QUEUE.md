@@ -49,8 +49,11 @@ See individual `NNNN-*.md` logs for shipped/attempted work.
   random (user-flagged); `merge_uniform_table_rows` fixes it.
 
 ## Formatting / quality
-- **Wikia/infobox formatting** (source-view markup now stripped, 0045; infobox layout still open) — harrypotter.wikia.com/wiki/Tom_Felton?oldid=826898; the gold
-  formats the page (infobox/sections) much better than us. Queued.
+- ~~Wikia/infobox formatting~~ — NOT a clean lever (investigated): gold formats infoboxes as
+  `- **Key:** Value` (markdown bold-key list) on only 2/12 dev infobox docs (harrypotter,
+  wikipedia/Berkovitsa) — rare AND requires replicating markdown bold, which is gold-
+  unpredictable (0024). The label:value pairing is structural but without the bold won't
+  match gold. Gold-typography wall.
 - **contentdm spacing** — olemiss/cgsc: handled inline-whitespace (0026) but check residual.
 - ~~gist code formatting~~ — SHIPPED (0055): GitHub/gist line-numbered code TABLES rewritten
   to verbatim <pre> (indentation + single-newline preserved; gist Lev 0.679→0.726, aggregate
