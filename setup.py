@@ -31,7 +31,10 @@ setup(
     url="https://github.com/XenonMolecule/jusText",
     license="The BSD 2-Clause License",
     install_requires=[
-        'lxml[html_clean] >= 4.4.2',
+        'lxml >= 4.4.2',
+        # lxml 5.2 moved the HTML cleaner to a standalone package; the lxml[html_clean] extra
+        # doesn't reliably pull it (e.g. when lxml is already installed), so require it directly.
+        'lxml_html_clean >= 0.1',
         'backports.functools-lru-cache; python_version < "3.2"',
         # The bundled 3 MB classifier (auto-used by default) needs these. If any are absent,
         # jusText degrades gracefully to the heuristic classifier. The model was trained with

@@ -19,7 +19,12 @@ try:
 except ImportError:
     from backports.functools_lru_cache import lru_cache
 
-from lxml.html.clean import Cleaner
+# lxml 5.2 split the HTML cleaner into a standalone ``lxml_html_clean`` package; older lxml
+# still ships it at ``lxml.html.clean``. Try the new location first, fall back to the old one.
+try:
+    from lxml_html_clean import Cleaner
+except ImportError:
+    from lxml.html.clean import Cleaner
 from xml.sax.handler import ContentHandler
 from .paragraph import Paragraph
 from ._compat import unicode, ignored, unescape
