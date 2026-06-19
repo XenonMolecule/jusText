@@ -861,8 +861,11 @@ def vbulletin_paragraphs(dom, include_comments=True):
     for body_el in bodies:
         others = [b for b in bodies if b is not body_el]
         container = _post_container(body_el, others)
+        # First *non-empty* username: some skins (androidcentral) put an empty avatar <a
+        # class="username"> before the text one, so users[0] is blank and would skip the post.
         users = container.xpath('.//a[contains(@class,"username")]')
-        username = users[0].text_content().strip() if users else ""
+        username = next((u.text_content().strip() for u in users
+                         if u.text_content().strip()), "")
         if not username:
             continue
         dates = container.xpath('.//*[contains(@class,"date")]//text()')
