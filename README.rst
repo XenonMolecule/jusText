@@ -18,6 +18,31 @@ This is a fork of original (currently unmaintained) code of jusText_ hosted
 on Google Code.
 
 
+This fork (improved extraction + learned classifier)
+-----------------------------------------------------
+This fork (`github.com/XenonMolecule/jusText <https://github.com/XenonMolecule/jusText>`_)
+substantially improves main-content extraction over upstream jusText, tuned on an
+LLM-distilled extraction benchmark. On the **held-out test set** (general split, 1000 docs)
+it raises ROUGE-L F1 from **0.773 → 0.889** and Levenshtein similarity from **0.690 → 0.826**;
+every domain split (code/math/science/table) improves too.
+
+It adds forum/Q&A/comment role-transforms (StackExchange, vBulletin, phpBB, SMF, bbPress,
+XenForo, WordPress comments), FAQ restructuring, code-block/indentation preservation, LaTeX
+math-image recovery, truncated-URL repair, mojibake/encoding repair, and a learned paragraph
+classifier. The classifier runs in three tiers (general dev F1 / Lev):
+
+============================  =========  ==========================================
+tier                          F1 / Lev   footprint
+============================  =========  ==========================================
+heuristic (no model)          0.821/0.74 pure-Python, no extra deps
+bundled 3 MB sklearn model    0.866/0.79 ships in the wheel (scikit-learn)
+fastText stack                0.886/0.82 ~780 MB, auto-downloaded from HuggingFace
+============================  =========  ==========================================
+
+The best model lives on HuggingFace:
+`MichaelR207/justext-classifier <https://huggingface.co/MichaelR207/justext-classifier>`_.
+
+
 Adaptations of the algorithm to other languages:
 
 - `C++ <https://github.com/endredy/jusText>`_
@@ -47,10 +72,27 @@ Some currently (Jan 2020) maintained alternatives:
 
 Installation
 ------------
-Make sure you have Python_ 2.7+/3.5+ and `pip <https://pip.pypa.io/en/stable/>`_
-(`Windows <http://docs.python-guide.org/en/latest/starting/install/win/>`_,
-`Linux <http://docs.python-guide.org/en/latest/starting/install/linux/>`_) installed.
-Run simply:
+Install this fork from GitHub. The 3 MB classifier is bundled and used automatically:
+
+.. code-block:: bash
+
+  $ pip install "git+https://github.com/XenonMolecule/jusText"
+
+For the best (fastText) tier, add the ``fasttext`` extra — the ~780 MB model is then
+downloaded once from HuggingFace on first use and cached under ``~/.cache/justext``:
+
+.. code-block:: bash
+
+  $ pip install "jusText[fasttext] @ git+https://github.com/XenonMolecule/jusText"
+  $ python -c "import justext; justext.download_fasttext()"   # optional: pre-fetch
+
+Behaviour knobs (environment variables): ``JUSTEXT_MODEL`` =
+``fasttext`` | ``sklearn`` | ``heuristic`` | ``auto`` (default); ``JUSTEXT_NO_DOWNLOAD`` to
+force the bundled model; ``JUSTEXT_HF_REPO`` to point at a different model repo;
+``JUSTEXT_CACHE`` to relocate the download cache. If a tier is unavailable (missing dep or
+offline), jusText degrades gracefully to the next one, so it always works.
+
+The upstream package is still on PyPI as ``jusText`` (heuristic only):
 
 .. code-block:: bash
 

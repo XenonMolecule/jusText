@@ -70,7 +70,7 @@ joblib_path, fasttext_path = justext.download_fasttext()   # pulls both files he
 |---|---|
 | `JUSTEXT_MODEL` | `fasttext` \| `sklearn` \| `heuristic` \| `auto` (default) |
 | `JUSTEXT_NO_DOWNLOAD` | set to skip the download and use the bundled 3 MB model |
-| `JUSTEXT_HF_REPO` | point at a different repo (default `XenonMolecule/justext-classifier`) |
+| `JUSTEXT_HF_REPO` | point at a different repo (default `MichaelR207/justext-classifier`) |
 | `JUSTEXT_CACHE` | override the download cache directory |
 
 If `fasttext` isn't installed, or the download fails, the fork degrades gracefully to the
