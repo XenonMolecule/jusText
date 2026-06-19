@@ -212,6 +212,38 @@ def fix_orphaned_list_markers(paragraphs):
             paragraph.text_nodes = [fixed]
 
 
+# Doubled list numbers (research log 0062). Some CMSs render a numbered list where each item
+# *also* carries an explicit source number (recipe steps: `<li><span>2</span><span>In large
+# bowl...`), so on top of our injected `<ol>` marker the paragraph reads ``2. 2 In large
+# bowl``. We drop the redundant source number -- but only when the doubling is SYSTEMATIC
+# (>=2 items whose source number equals the marker ordinal); a lone ``1. 1 cup flour`` is a
+# real quantity and left untouched.
+_DOUBLED_ORDINAL = re.compile(r"^(\d{1,3})\.\s+\1(?=\s|$)")
+_BARE_ORDINAL = re.compile(r"^(\d{1,3})\.$")
+
+
+def fix_doubled_list_numbers(paragraphs):
+    """In-place: strip a source step-number that duplicates the injected ordinal marker."""
+    kept = [p for p in paragraphs if not p.is_boilerplate]
+    within = [p for p in kept if _DOUBLED_ORDINAL.match(p.text)]
+    # Cross-paragraph: an inner block split the marker off, so a bare ``N.`` paragraph is
+    # followed by a kept paragraph that starts with the same number ``N`` (the item text).
+    orphans = []
+    for i, p in enumerate(kept[:-1]):
+        match = _BARE_ORDINAL.match(p.text.strip())
+        if match and re.match(r"%s(?=\s)" % match.group(1), kept[i + 1].text.strip()):
+            orphans.append((p, kept[i + 1], match.group(1)))
+    if len(within) + len(orphans) < 2:
+        return
+    for paragraph in within:
+        paragraph.text_nodes = [_DOUBLED_ORDINAL.sub(r"\1.", paragraph.text, count=1)]
+    for marker_p, item_p, number in orphans:
+        body = re.sub(r"^%s\s+" % number, "", item_p.text.strip())
+        item_p.text_nodes = ["%s. %s" % (number, body)]
+        marker_p.text_nodes = []
+        marker_p.class_type = "bad"
+
+
 # Unrendered MediaWiki markup (research log 0045). Some wiki pages (`index.php?title=...`
 # source views) leak raw wikitext into the output -- `[[Link|text]]`, `{{templates}}`,
 # `'''bold'''`, `== headings ==` -- which the gold renders to clean text. Strip the markup
@@ -1167,6 +1199,7 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
 
     merge_uniform_table_rows(paragraphs)
     fix_orphaned_list_markers(paragraphs)
+    fix_doubled_list_numbers(paragraphs)
 
     if fix_encoding:
         decode_double_entities(paragraphs)
