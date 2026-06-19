@@ -98,10 +98,13 @@ def main():
         "tag": run.tag, "dataset": run.dataset, "split": run.split, "n": len(docs),
         "f1": round(float(np.mean(f1s)), 4), "lev": round(float(np.mean(levs)), 4),
         "median_f1": round(float(np.median(f1s)), 4),
+        "median_lev": round(float(np.median(levs)), 4),
         "cats": {k: {"n": len(v), "mean_f1": round(float(np.mean(v)), 3)} for k, v in
                  sorted(cats.items(), key=lambda kv: np.mean(kv[1]))},
         "hist": [sum(1 for x in f1s if lo <= x < lo + 0.1 or (lo == 0.9 and x == 1.0))
                  for lo in [i / 10 for i in range(10)]],
+        "lev_hist": [sum(1 for x in levs if lo <= x < lo + 0.1 or (lo == 0.9 and x == 1.0))
+                     for lo in [i / 10 for i in range(10)]],
     }
 
     def embed(obj):
@@ -165,6 +168,7 @@ tr.docrow{cursor:pointer}tr.docrow:hover{background:#f8fafc}
 <div class="cards">
  <div class="card"><h3>Where the gaps come from</h3><div id="cats"></div></div>
  <div class="card"><h3>F1 distribution — click a band to see those docs</h3><div id="hist"></div></div>
+ <div class="card"><h3>Lev distribution — click a band to see those docs</h3><div id="levhist"></div></div>
 </div>
 <div class="controls">
  <label>Sort <select id="sort">
@@ -173,6 +177,7 @@ tr.docrow{cursor:pointer}tr.docrow:hover{background:#f8fafc}
  </select></label>
  <label>Category <select id="cat"><option value="">all</option></select></label>
  <label>F1 band <select id="band"><option value="">all</option></select></label>
+ <label>Lev band <select id="levband"><option value="">all</option></select></label>
  <input id="q" placeholder="search url…" size="20">
  <span class="mut" id="count"></span>
 </div>
@@ -184,7 +189,7 @@ tr.docrow{cursor:pointer}tr.docrow:hover{background:#f8fafc}
 <script>
 /*DATA*/
 const $=s=>document.querySelector(s);
-$("#hdr").innerHTML=`<span class="big">${SUMMARY.tag}</span> &nbsp; ${SUMMARY.dataset}/${SUMMARY.split} (${SUMMARY.n} docs) &nbsp;&nbsp; mean F1 <span class="big">${SUMMARY.f1}</span> <span class="mut">(median ${SUMMARY.median_f1})</span> &nbsp; mean Lev <span class="big">${SUMMARY.lev}</span> &nbsp; <span class="tgt">target 0.90 / 0.85</span>`;
+$("#hdr").innerHTML=`<span class="big">${SUMMARY.tag}</span> &nbsp; ${SUMMARY.dataset}/${SUMMARY.split} (${SUMMARY.n} docs) &nbsp;&nbsp; mean F1 <span class="big">${SUMMARY.f1}</span> <span class="mut">(median ${SUMMARY.median_f1})</span> &nbsp; mean Lev <span class="big">${SUMMARY.lev}</span> <span class="mut">(median ${SUMMARY.median_lev})</span> &nbsp; <span class="tgt">target 0.90 / 0.85</span>`;
 // category bars
 const cmax=Math.max(...Object.values(SUMMARY.cats).map(c=>c.n));
 $("#cats").innerHTML=Object.entries(SUMMARY.cats).map(([k,c])=>
@@ -193,18 +198,24 @@ $("#cats").innerHTML=Object.entries(SUMMARY.cats).map(([k,c])=>
 const hmax=Math.max(...SUMMARY.hist);
 $("#hist").innerHTML=SUMMARY.hist.map((n,i)=>{const lo=(i/10).toFixed(1),hi=((i+1)/10).toFixed(1);
  return `<div class="row2" onclick="document.getElementById('band').value='${i}';apply()"><span class="mut">${lo}–${hi}</span><span><span class="bar"><i style="width:${100*n/hmax}%"></i></span> <b>${n}</b></span></div>`}).join("");
+// lev histogram
+const lhmax=Math.max(...SUMMARY.lev_hist);
+$("#levhist").innerHTML=SUMMARY.lev_hist.map((n,i)=>{const lo=(i/10).toFixed(1),hi=((i+1)/10).toFixed(1);
+ return `<div class="row2" onclick="document.getElementById('levband').value='${i}';apply()"><span class="mut">${lo}–${hi}</span><span><span class="bar"><i style="width:${100*n/lhmax}%"></i></span> <b>${n}</b></span></div>`}).join("");
 // fill selects
 const cats=[...new Set(DOCS.map(d=>d.cat))];
 $("#cat").innerHTML='<option value="">all</option>'+cats.map(c=>`<option>${c}</option>`).join("");
 $("#band").innerHTML='<option value="">all</option>'+[...Array(10)].map((_,i)=>`<option value="${i}">${(i/10).toFixed(1)}–${((i+1)/10).toFixed(1)}</option>`).join("");
+$("#levband").innerHTML='<option value="">all</option>'+[...Array(10)].map((_,i)=>`<option value="${i}">${(i/10).toFixed(1)}–${((i+1)/10).toFixed(1)}</option>`).join("");
 const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 function rowHTML(d){return `<tr class="docrow" data-i="${d.i}"><td class="num">${d.f1.toFixed(3)}</td><td class="num">${d.lev.toFixed(3)}</td><td class="num">${d.ratio}</td><td><span class="pill c-${d.cat}">${d.cat}</span></td><td class="mut">${esc(d.url)}</td></tr>`}
 function diffHTML(d){return d.segs.map(s=>`<span class="${s[0]}">${esc(s[1])}</span>`).join(" ")}
 function apply(){
  let v=DOCS.slice();
- const cat=$("#cat").value,band=$("#band").value,q=$("#q").value.toLowerCase();
+ const cat=$("#cat").value,band=$("#band").value,levband=$("#levband").value,q=$("#q").value.toLowerCase();
  if(cat)v=v.filter(d=>d.cat==cat);
  if(band!=="")v=v.filter(d=>{const b=Math.min(9,Math.floor(d.f1*10));return b==+band});
+ if(levband!=="")v=v.filter(d=>{const b=Math.min(9,Math.floor(d.lev*10));return b==+levband});
  if(q)v=v.filter(d=>d.url.toLowerCase().includes(q));
  const s=$("#sort").value;
  const cmp={f1a:(a,b)=>a.f1-b.f1,f1d:(a,b)=>b.f1-a.f1,leva:(a,b)=>a.lev-b.lev,ratiod:(a,b)=>b.ratio-a.ratio,ratioa:(a,b)=>a.ratio-b.ratio}[s];
@@ -228,7 +239,7 @@ $("#tb").addEventListener("click",e=>{
 });
 function setv(btn,which){const box=btn.closest(".diff");box.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("on"));btn.classList.add("on");
  box.querySelector(".vunified").style.display=which=="unified"?"block":"none";box.querySelector(".side").style.display=which=="side"?"grid":"none"}
-["sort","cat","band"].forEach(id=>$("#"+id).addEventListener("change",apply));$("#q").addEventListener("input",apply);
+["sort","cat","band","levband"].forEach(id=>$("#"+id).addEventListener("change",apply));$("#q").addEventListener("input",apply);
 apply();
 </script></body></html>"""
 
