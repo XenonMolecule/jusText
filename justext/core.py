@@ -1333,6 +1333,10 @@ def prepend_comment_authors(paragraphs, meta):
                 inserts.append((idx, _marker_paragraph(marker)))
                 used.add(i)
                 break
+    if inserts:
+        # The gold opens the kept comment section with a "**Comments**" heading (100% of
+        # comment-keep docs) -- emit it before the first comment marker.
+        inserts.insert(0, (inserts[0][0], _marker_paragraph("**Comments**")))
     for offset, (idx, marker_paragraph) in enumerate(inserts):
         paragraphs.insert(idx + offset, marker_paragraph)
 

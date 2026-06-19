@@ -34,6 +34,12 @@ only comments the model already keeps get a marker; dropped threads are never re
 The inline→separate-line change is metric-neutral in aggregate but corrects the placement on
 every kept-comment doc (visualized quality, [[data-quality-counts-without-metrics]]).
 
+## Follow-up: `**Comments**` heading
+
+The gold opens the kept comment section with a `**Comments**` heading (100% of the 56
+comment-keep docs). We now emit it before the first comment marker. SAP 0.9797 → **0.9802**;
+general dev neutral. (The `---` rule the gold sometimes adds is only 41% consistent -- skipped.)
+
 ## Not fixed (Problem 2)
 
 The user also flagged dropped short context lines (a comment's `Interesting solution.` intro,
