@@ -154,10 +154,12 @@ def test_preprocess_simple_bytes_xhtml_string_with_declaration():
 def test_lxml_do_not_hold_context_from_previous_parsing():
     """
     https://github.com/miso-belica/jusText/issues/17
+
+    Empty input is now handled gracefully (returns an empty document instead of raising
+    ParserError); this still verifies no context leaks from the previous parse.
     """
     html_to_dom("<justext></justext>")
 
-    with pytest.raises(lxml.etree.ParserError) as e:
-        html_to_dom("")
-
-    assert "justext" not in str(e.value)
+    dom = html_to_dom("")
+    assert dom is not None
+    assert "justext" not in lxml.html.tostring(dom).decode("utf-8")

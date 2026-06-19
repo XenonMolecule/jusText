@@ -296,12 +296,20 @@ def html_to_dom(html, default_encoding=DEFAULT_ENCODING, encoding=None, errors=D
     else:
         decoded_html = decode_html(html, default_encoding, encoding, errors)
 
+    # Empty / whitespace-only input parses to "Document is empty" in lxml -- return an empty
+    # document so justext() yields no paragraphs instead of raising (research log 0071).
+    if not decoded_html or not decoded_html.strip():
+        return lxml.html.fromstring("<html></html>")
+
     try:
         dom = lxml.html.fromstring(decoded_html, parser=lxml.html.HTMLParser())
     except ValueError:
         # Unicode strings with encoding declaration are not supported.
         # for XHTML files with encoding declaration, use the declared encoding
         dom = lxml.html.fromstring(html, parser=lxml.html.HTMLParser())
+    except lxml.etree.ParserError:
+        # Content with no parseable elements (e.g. only a comment or stray bytes).
+        return lxml.html.fromstring("<html></html>")
 
     return dom
 
