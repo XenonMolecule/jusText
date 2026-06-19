@@ -22,7 +22,7 @@ _PKG_DIR = os.path.dirname(os.path.abspath(__file__))
 BUNDLED_MODEL = os.path.join(_PKG_DIR, "models", "general.joblib")
 
 # HuggingFace repo holding the large fastText-stacked model. Override with $JUSTEXT_HF_REPO.
-HF_REPO = os.environ.get("JUSTEXT_HF_REPO", "XenonMolecule/justext-models")
+HF_REPO = os.environ.get("JUSTEXT_HF_REPO", "XenonMolecule/justext-classifier")
 _FTSTACK_FILE = "general-ftstack.joblib"
 _FASTTEXT_FILE = "general_ft.bin"
 
