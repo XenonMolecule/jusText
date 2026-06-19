@@ -1155,6 +1155,61 @@ def merge_uniform_table_rows(paragraphs, min_rows=8, min_kept=2, max_link_densit
             p.class_type = "good"
 
 
+# LaTeX math images (research log 0065). Math forums/blogs render equations as an <img>
+# served by a LaTeX renderer (codecogs/mimetex/mathtex/...), with the formula in the ``alt``
+# (and the ``src`` query). jusText drops <img>, so the formula vanished; the gold transcribes
+# it to plaintext (``\frac 1{4-y}`` -> ``1/(4 - y)``). We do the same: detect a LaTeX-renderer
+# img and replace it with a text span carrying a light LaTeX->text conversion. Scoped tightly
+# to known renderer hosts so ordinary images (avatars, photos) are never touched.
+_LATEX_SRC = re.compile(
+    r"(codecogs|mimetex|mathtex|/latex|cgi-bin/mat|imgtex|forkosh|/cgi-bin/mimetex)", re.I)
+
+
+def _latex_to_text(s):
+    """Best-effort LaTeX -> readable plaintext (matches the gold's transcription style)."""
+    if not s:
+        return ""
+    s = re.sub(r"^\$+|\$+$", "", s.strip()).strip()           # strip $...$ delimiters
+    for _ in range(4):                                         # \frac variants -> a/(b)
+        s = re.sub(r"\\d?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}", r"(\1)/(\2)", s)
+        s = re.sub(r"\\d?frac\s*([0-9A-Za-z])\s*\{([^{}]*)\}", r"\1/(\2)", s)
+        s = re.sub(r"\\d?frac\s*\{([^{}]*)\}\s*([0-9A-Za-z])", r"(\1)/\2", s)
+        s = re.sub(r"\\d?frac\s*([0-9A-Za-z])\s*([0-9A-Za-z])", r"\1/\2", s)
+    s = re.sub(r"\\sqrt\s*\{([^{}]*)\}", r"sqrt(\1)", s)
+    s = re.sub(r"\\left\s*([([{|])", r"\1", s)
+    s = re.sub(r"\\right\s*([)\]}|])", r"\1", s)
+    s = s.replace("\\cdot", "*").replace("\\times", "*").replace("\\pi", "pi")
+    s = re.sub(r"\\[a-zA-Z]+", " ", s)                         # drop remaining \commands
+    s = re.sub(r"[{}]", " ", s)                                # drop braces
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def recover_latex_images(dom):
+    """Replace LaTeX-renderer <img> elements with their transcribed formula text, in place."""
+    import lxml.etree as etree
+    try:
+        from urllib.parse import unquote
+    except ImportError:                                        # py2
+        from urllib import unquote
+    for img in dom.xpath("//img[@src]"):
+        src = img.get("src") or ""
+        if not _LATEX_SRC.search(src):
+            continue
+        alt = img.get("alt")
+        if alt is None:
+            match = re.search(r"[?&](?:latex|formula|chl)=?(.*)$", src)
+            alt = unquote(match.group(1)) if match else ""
+        text = _latex_to_text(alt)
+        if not text:
+            continue
+        span = etree.Element("span")
+        span.text = " " + text + " "
+        span.tail = img.tail
+        parent = img.getparent()
+        if parent is not None:
+            parent.replace(img, span)
+
+
 def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         length_high=LENGTH_HIGH_DEFAULT, stopwords_low=STOPWORDS_LOW_DEFAULT,
         stopwords_high=STOPWORDS_HIGH_DEFAULT, max_link_density=MAX_LINK_DENSITY_DEFAULT,
@@ -1185,6 +1240,9 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         html_text = repair_mojibake(html_text)
         html_text = escape_angle_emails(html_text)
     dom = html_to_dom(html_text, default_encoding, encoding, enc_errors)
+
+    # Transcribe LaTeX math images to text before any path reads the DOM (forum or not).
+    recover_latex_images(dom)
 
     # Q&A forums (StackExchange): rewrite role+author before each post body (0031).
     if forum_qa:
