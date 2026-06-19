@@ -1308,24 +1308,33 @@ def _comment_author_meta(dom):
 
 
 def prepend_comment_authors(paragraphs, meta):
-    """In-place: prefix `*author* (date):` onto the first KEPT paragraph of each comment body."""
+    """In-place: insert a `*author* (date):` marker line before each comment's first KEPT line.
+
+    The marker is its OWN paragraph (the gold puts the author on a separate line above the
+    comment), matched to the FIRST kept paragraph that begins -- or, if the greeting line was
+    dropped, falls within -- the comment body. Only kept comments get a marker, so a thread the
+    model dropped is never resurfaced (research log 0070, fixing the 0068 mis-placement where a
+    short greeting like "Hi Krishna," was skipped and the marker landed on the second line)."""
     if not meta:
         return
     used = set()
-    for p in paragraphs:
+    inserts = []
+    for idx, p in enumerate(paragraphs):
         if p.is_boilerplate:
             continue
         text = re.sub(r"\s+", " ", p.text).strip()
-        if len(text) < 15:
+        if len(text) < 4:
             continue
         for i, (body, author, date) in enumerate(meta):
             if i in used:
                 continue
-            if text in body or body.startswith(text[:60]):
-                marker = "*%s* (%s): " % (author, date) if date else "*%s*: " % author
-                p.text_nodes = [marker + p.text]
+            if body.startswith(text[:50]) or (len(text) >= 15 and text in body):
+                marker = "*%s* (%s):" % (author, date) if date else "*%s*:" % author
+                inserts.append((idx, _marker_paragraph(marker)))
                 used.add(i)
                 break
+    for offset, (idx, marker_paragraph) in enumerate(inserts):
+        paragraphs.insert(idx + offset, marker_paragraph)
 
 
 def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
