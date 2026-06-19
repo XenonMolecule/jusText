@@ -518,7 +518,12 @@ class ParagraphMaker(ContentHandler):
                 if self.paragraph.text_nodes:
                     self.paragraph.append_text(' ')
                 return
-            text = self.paragraph.append_text(content)
+            # Newlines inside a source text node are just HTML pretty-printing (indented
+            # `<dt>`/`<dd>`/`<td>` cells, wrapped prose) -- collapse them to spaces so a
+            # quantity and its ingredient read "1 1/2 lb beef", not split across two lines.
+            # Real line breaks come from `<br>`/list markers, which inject their own '\n'
+            # via the element handlers, so those survive (research log 0061).
+            text = self.paragraph.append_text(content.replace("\r", " ").replace("\n", " "))
 
         if self.link:
             self.paragraph.chars_count_in_links += len(text)

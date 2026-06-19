@@ -137,7 +137,9 @@ class TestSax():
             paragraphs[0],
             words_count=7,
             tags_count=2,
-            text="I am top-inline\nand I am happy"
+            # Source newlines inside inline text are pretty-printing, not line breaks:
+            # they collapse to a space (research log 0061). Only <br>/list markers emit \n.
+            text="I am top-inline and I am happy"
         )
         self.assert_paragraphs_equal(
             paragraphs[1],
@@ -161,7 +163,7 @@ class TestSax():
             paragraphs[4],
             words_count=7,
             tags_count=0,
-            text="I am inline\nand I am happy"
+            text="I am inline and I am happy"
         )
 
     def test_links(self):
@@ -184,7 +186,7 @@ class TestSax():
             paragraphs[0],
             words_count=7,
             tags_count=2,
-            text="I am top-inline\nand I am happy",
+            text="I am top-inline and I am happy",
             chars_count_in_links=31
         )
         self.assert_paragraphs_equal(
@@ -210,5 +212,5 @@ class TestSax():
             paragraphs[4],
             words_count=7,
             tags_count=0,
-            text="I am inline\nand I am happy"
+            text="I am inline and I am happy"
         )
