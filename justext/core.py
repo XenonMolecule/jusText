@@ -1241,6 +1241,72 @@ def restructure_faq(dom):
                 parent.remove(faq)
 
 
+# Blog comment authors (research log 0068). WordPress-style comments (`article/li/div`
+# id="comment-N" with `.comment-content`) put the author in a `.fn`/`.comment-author-link`
+# and the date in `<time>`/`.comment-meta`; jusText keeps the body but the author header is
+# short/link-heavy and gets dropped, so the commenter's name never precedes the comment (the
+# gold writes `*author* (date):` before each). We POST-classification prepend that marker to
+# the first KEPT paragraph of each comment -- touching only already-kept comments, so we never
+# resurrect a thread the model dropped. Pingbacks/trackbacks and non-name link text
+# ("Permalink"/"Reply") are excluded.
+_COMMENT_DATE = re.compile(
+    r"[A-Z][a-z]+ \d{1,2}, \d{4}(?: at \d{1,2}:\d{2} ?[ap]m)?", re.I)
+_NON_AUTHOR = re.compile(r"^(?:permalink|reply|link|quote|edit|share|report|says|\d+)$", re.I)
+
+
+def _comment_author_meta(dom):
+    """[(body_text, author, date)] for real WordPress comments (skips pingbacks). [] if <2."""
+    comments = dom.xpath(
+        '//*[self::li or self::article or self::div][starts-with(@id, "comment-")]'
+        '[.//*[contains(@class,"comment-content") or contains(@class,"comment-body")]]')
+    if len(comments) < 2:
+        return []
+    out = []
+    for c in comments:
+        cls = (c.get("class") or "").lower()
+        if "pingback" in cls or "trackback" in cls:
+            continue
+        author = ""
+        for t in (c.xpath('.//*[contains(@class,"fn") or contains(@class,"comment-author-link")]//text()')
+                  + c.xpath('.//cite//text()')):
+            t = re.sub(r"\s+", " ", t).strip()
+            if t and not _NON_AUTHOR.match(t):
+                author = t
+                break
+        date = ""
+        for cand in c.xpath('.//time/@datetime | .//time//text() '
+                            '| .//*[contains(@class,"comment-date") or contains(@class,"comment-meta")]//text()'):
+            match = _COMMENT_DATE.search(cand)
+            if match:
+                date = match.group(0)
+                break
+        body = c.xpath('.//*[contains(@class,"comment-content") or contains(@class,"comment-body")]')
+        if author and body:
+            out.append((re.sub(r"\s+", " ", body[0].text_content()).strip(), author, date))
+    return out
+
+
+def prepend_comment_authors(paragraphs, meta):
+    """In-place: prefix `*author* (date):` onto the first KEPT paragraph of each comment body."""
+    if not meta:
+        return
+    used = set()
+    for p in paragraphs:
+        if p.is_boilerplate:
+            continue
+        text = re.sub(r"\s+", " ", p.text).strip()
+        if len(text) < 15:
+            continue
+        for i, (body, author, date) in enumerate(meta):
+            if i in used:
+                continue
+            if text in body or body.startswith(text[:60]):
+                marker = "*%s* (%s): " % (author, date) if date else "*%s*: " % author
+                p.text_nodes = [marker + p.text]
+                used.add(i)
+                break
+
+
 def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         length_high=LENGTH_HIGH_DEFAULT, stopwords_low=STOPWORDS_LOW_DEFAULT,
         stopwords_high=STOPWORDS_HIGH_DEFAULT, max_link_density=MAX_LINK_DENSITY_DEFAULT,
@@ -1276,6 +1342,9 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
     recover_latex_images(dom)
     # De-duplicate / de-chrome semantic FAQ accordions (no-op unless it's a FAQ page).
     restructure_faq(dom)
+    # Read blog-comment authors from the raw DOM now (the header is dropped during
+    # classification); applied post-classification to comments the model keeps. [] otherwise.
+    comment_meta = _comment_author_meta(dom)
 
     # Q&A forums (StackExchange): rewrite role+author before each post body (0031).
     if forum_qa:
@@ -1312,6 +1381,7 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
     merge_uniform_table_rows(paragraphs)
     fix_orphaned_list_markers(paragraphs)
     fix_doubled_list_numbers(paragraphs)
+    prepend_comment_authors(paragraphs, comment_meta)
 
     if fix_encoding:
         decode_double_entities(paragraphs)
