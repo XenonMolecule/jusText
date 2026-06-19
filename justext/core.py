@@ -762,12 +762,22 @@ def stackexchange_paragraphs(dom, include_comments=True):
         title = dom.xpath('//h1//text()')
     if title:
         paragraphs.append(_marker_paragraph(title[0].strip()))
-    posts = [("Question", questions[0])]
-    posts += [("Answer", a) for a in dom.xpath('//div[starts-with(@id,"answer-")]')]
-    for role, post in posts:
+    answers = dom.xpath('//div[starts-with(@id,"answer-")]')
+    # The accepted answer is flagged only on multi-answer threads, where naming the canonical
+    # solution carries signal -- with a single answer there is nothing to contrast, and the
+    # gold omits the flag there 16/19 of the time (research log 0059). The gold applies
+    # "(accepted)" inconsistently on multi-answer threads (~50%, no learnable pattern), so this
+    # is a deliberate quality signal at ~zero full-dataset metric cost, not a gold-match.
+    multi = len(answers) > 1
+    posts = [("Question", questions[0], False)]
+    posts += [("Answer", a, multi and "accepted-answer" in (a.get("class") or ""))
+              for a in answers]
+    for role, post, accepted in posts:
         author = _qa_author(post)
-        paragraphs.append(_marker_paragraph(
-            "**%s (%s)**" % (role, author) if author else "**%s**" % role))
+        marker = "**%s (%s)**" % (role, author) if author else "**%s**" % role
+        if accepted:
+            marker += " (accepted)"
+        paragraphs.append(_marker_paragraph(marker))
         bodies = post.xpath('.//*[contains(@class,"post-text") or @itemprop="text"]')
         if bodies:
             for body in ParagraphMaker.make_paragraphs(bodies[0]):
