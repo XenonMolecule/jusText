@@ -1184,6 +1184,27 @@ def _latex_to_text(s):
     return re.sub(r"\s+", " ", s).strip()
 
 
+# Truncated autolink URLs (research log 0069). phpBB/vBulletin shorten a long URL in the
+# *displayed* anchor text -- "http://site/long-pa ... ?x=1" -- while the full URL stays in
+# `href`. jusText emitted the truncated text; the gold keeps the full URL. We restore the
+# href as the link text when it matches the visible prefix+suffix (so a tracking/redirect
+# href that doesn't correspond to the shown URL is left alone).
+_TRUNCATED_URL = re.compile(r"^(https?://\S+?)\s*\.\.\.\s*(\S+)$")
+
+
+def expand_truncated_urls(dom):
+    """Replace a truncated-URL anchor's text with its full href, in place."""
+    for a in dom.xpath("//a[@href]"):
+        if len(a):                       # has element children -> not a plain autolink
+            continue
+        match = _TRUNCATED_URL.match((a.text or "").strip())
+        if not match:
+            continue
+        href = a.get("href") or ""
+        if href.startswith(match.group(1)) and href.endswith(match.group(2)):
+            a.text = href
+
+
 def recover_latex_images(dom):
     """Replace LaTeX-renderer <img> elements with their transcribed formula text, in place."""
     import lxml.etree as etree
@@ -1338,6 +1359,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         html_text = escape_angle_emails(html_text)
     dom = html_to_dom(html_text, default_encoding, encoding, enc_errors)
 
+    # Restore full URLs that phpBB/vBulletin truncated in the visible anchor text.
+    expand_truncated_urls(dom)
     # Transcribe LaTeX math images to text before any path reads the DOM (forum or not).
     recover_latex_images(dom)
     # De-duplicate / de-chrome semantic FAQ accordions (no-op unless it's a FAQ page).
