@@ -452,6 +452,7 @@ class ParagraphMaker(ContentHandler):
         self.link = False
         self.br = False
         self.pre = 0  # depth inside <pre>/<textarea>: preserve whitespace verbatim (0021)
+        self.skip = 0  # depth inside <style>/<script>: their text is never content (0064)
         self.list_stack = []  # stack of [tag, counter] for <ol>/<ul> list markers (0037)
         self._start_new_pragraph()
 
@@ -464,6 +465,13 @@ class ParagraphMaker(ContentHandler):
     def startElementNS(self, name, qname, attrs):
         name = name[1]
         self.path.append(name)
+
+        # <style>/<script> text is never content. The non-forum path strips them in the
+        # preprocessor, but forum handlers run ParagraphMaker on the raw post body, where an
+        # inline `<style>img.top{...}</style>` before a math <img> would otherwise leak its
+        # CSS as text (mathhelpforum equations -> "img.top {vertical-align:15%;}"); 0064.
+        if name in ("style", "script"):
+            self.skip += 1
 
         # Track list nesting so <li> items get markdown markers (research log 0037).
         # Skip markers for STRUCTURAL lists (forum post lists, nav/menus/sidebars) whose
@@ -520,6 +528,8 @@ class ParagraphMaker(ContentHandler):
 
         if name in ("pre", "textarea") and self.pre > 0:
             self.pre -= 1
+        if name in ("style", "script") and self.skip > 0:
+            self.skip -= 1
         if name in ("ol", "ul") and self.list_stack:
             self.list_stack.pop()
         if name in PARAGRAPH_TAGS:
@@ -533,6 +543,9 @@ class ParagraphMaker(ContentHandler):
         self._start_new_pragraph()
 
     def characters(self, content):
+        # <style>/<script> CSS/JS text is never document content (research log 0064).
+        if self.skip > 0:
+            return
         # Inside <pre>/<textarea> keep whitespace verbatim (don't skip blank, don't
         # normalize) so code indentation and line breaks survive (research log 0021).
         if self.pre > 0:
