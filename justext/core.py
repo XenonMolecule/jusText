@@ -1210,6 +1210,37 @@ def recover_latex_images(dom):
             parent.replace(img, span)
 
 
+# Semantic FAQ accordions (research log 0066). Some pages (off-canvas/accordion FAQs) list the
+# questions TWICE -- once in a `<ul class="questions">` trigger list, once in `div.faq` blocks
+# that hold the real `div.question` + `div.answer` pair. The trigger list comes first, so the
+# model's dedup keeps it and DROPS the answer-block question -- orphaning every question from
+# its answer. We detect the FAQ structure and (1) drop the duplicate trigger list, (2) strip
+# the per-block template chrome (the "Question" label, the vote form/%). Gated on >=2 real
+# question+answer blocks, so non-FAQ pages are untouched.
+def restructure_faq(dom):
+    """In-place: de-duplicate and de-chrome semantic FAQ blocks. No-op unless it's a FAQ."""
+    faqs = dom.xpath('//div[contains(concat(" ", @class, " "), " faq ")]')
+    real = [f for f in faqs
+            if f.xpath('.//*[contains(concat(" ",@class," ")," question ")]//text()[normalize-space()]')
+            and f.xpath('.//*[contains(concat(" ",@class," ")," answer ")]//text()[normalize-space()]')]
+    if len(real) < 2:
+        return
+    for ul in dom.xpath('//ul[contains(concat(" ", @class, " "), " questions ")]'):
+        parent = ul.getparent()
+        if parent is not None:
+            parent.remove(ul)
+    for faq in faqs:
+        for chrome in faq.xpath('.//label | .//form | .//*[contains(@class,"vote")] '
+                                '| .//*[contains(@class,"helpful")]'):
+            parent = chrome.getparent()
+            if parent is not None:
+                parent.remove(chrome)
+        if not faq.xpath('.//*[contains(concat(" ",@class," ")," answer ")]//text()[normalize-space()]'):
+            parent = faq.getparent()       # trigger block (no real answer) -> drop
+            if parent is not None:
+                parent.remove(faq)
+
+
 def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         length_high=LENGTH_HIGH_DEFAULT, stopwords_low=STOPWORDS_LOW_DEFAULT,
         stopwords_high=STOPWORDS_HIGH_DEFAULT, max_link_density=MAX_LINK_DENSITY_DEFAULT,
@@ -1243,6 +1274,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
 
     # Transcribe LaTeX math images to text before any path reads the DOM (forum or not).
     recover_latex_images(dom)
+    # De-duplicate / de-chrome semantic FAQ accordions (no-op unless it's a FAQ page).
+    restructure_faq(dom)
 
     # Q&A forums (StackExchange): rewrite role+author before each post body (0031).
     if forum_qa:
