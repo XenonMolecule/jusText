@@ -60,6 +60,9 @@ _STRUCTURAL_LIST = ("nav", "menu", "tab", "crumb", "pag", "sidebar", "widget", "
 
 DEFAULT_ENCODING = 'utf8'
 DEFAULT_ENC_ERRORS = 'replace'
+# Sentinel for justext(model=...): the default auto-selects the best installed model (fastText
+# stack -> bundled 3MB sklearn -> heuristic). Pass model=None to force the heuristic path.
+AUTO_MODEL = object()
 CHARSET_META_TAG_PATTERN = re.compile(br"""<meta[^>]+charset=["']?([^'"/>\s]+)""", re.IGNORECASE)
 GOOD_OR_BAD = {'good', 'bad'}
 
@@ -1346,7 +1349,7 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         stopwords_high=STOPWORDS_HIGH_DEFAULT, max_link_density=MAX_LINK_DENSITY_DEFAULT,
         max_heading_distance=MAX_HEADING_DISTANCE_DEFAULT, no_headings=NO_HEADINGS_DEFAULT,
         encoding=None, default_encoding=DEFAULT_ENCODING,
-        enc_errors=DEFAULT_ENC_ERRORS, preprocessor=preprocessor, model=None,
+        enc_errors=DEFAULT_ENC_ERRORS, preprocessor=preprocessor, model=AUTO_MODEL,
         fix_encoding=True, forum_qa=True, include_comments=True):
     """
     Converts an HTML page into a list of classified paragraphs. Each paragraph
@@ -1367,6 +1370,9 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
     comment thread is kept per post by default (``include_comments``, research log 0034);
     set it false for strict gold-matching benchmarking.
     """
+    if model is AUTO_MODEL:
+        from ._models import get_model
+        model = get_model()
     if fix_encoding:
         html_text = repair_mojibake(html_text)
         html_text = escape_angle_emails(html_text)

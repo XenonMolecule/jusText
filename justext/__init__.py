@@ -10,6 +10,8 @@ from __future__ import absolute_import
 
 from .utils import get_stoplists, get_stoplist
 from .core import justext
+from .classifier import ParagraphClassifier
+from ._models import get_model, download_fasttext
 
 
-__version__ = "3.0.2"
+__version__ = "4.0.0"

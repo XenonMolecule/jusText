@@ -119,16 +119,19 @@ class ParagraphClassifier:
         self.fasttext_model = fasttext_model
 
     @classmethod
-    def load(cls, path, threshold=0.5):
+    def load(cls, path, threshold=0.5, fasttext_path=None):
         import joblib  # lazy: only needed when a learned model is used
         payload = joblib.load(path)
         if not isinstance(payload, dict):
             return cls(payload, threshold)
         ft = None
-        if payload.get("fasttext_path"):
+        # fasttext_path argument overrides the path baked into the payload -- the saved path
+        # is machine-specific, so a downloaded/distributed model points it at the local copy.
+        ft_path = fasttext_path or payload.get("fasttext_path")
+        if ft_path:
             import fasttext  # lazy
             fasttext.FastText.eprint = lambda *a, **k: None
-            ft = fasttext.load_model(payload["fasttext_path"])
+            ft = fasttext.load_model(ft_path)
         return cls(payload["model"], payload.get("threshold", threshold),
                    payload.get("text_vectorizer"), payload.get("text_model"), ft)
 
