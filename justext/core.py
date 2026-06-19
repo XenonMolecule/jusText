@@ -831,9 +831,17 @@ def stackexchange_paragraphs(dom, include_comments=True):
 
 
 def _strip_quote_blocks(element):
-    """Deep-copy *element* with vBulletin/bbcode quote blocks removed (keeps code)."""
+    """Deep-copy *element* with vBulletin/bbcode quote blocks removed (keeps code).
+
+    Excludes ``blockquote.postcontent`` -- vBulletin 4 wraps the *whole post body* in
+    ``<blockquote class="postcontent restore">``, so stripping every blockquote deleted the
+    entire post and the handler silently fell through to the model (research log 0063). Real
+    reply-quotes (bbcode ``.quote``/``.bbcode_quote``, phpBB ``<blockquote>``) are still
+    removed.
+    """
     element = copy.deepcopy(element)
-    for quote in element.xpath('.//*[contains(@class,"quote")] | .//blockquote'):
+    for quote in element.xpath(
+            './/*[contains(@class,"quote")] | .//blockquote[not(contains(@class,"postcontent"))]'):
         parent = quote.getparent()
         if parent is not None:
             parent.remove(quote)
