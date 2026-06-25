@@ -1582,14 +1582,19 @@ def _merge_html_documents(html_text):
 
     WARC captures sometimes concatenate several documents (a redirect stub + the real page);
     this returns ``<html><body>...all bodies...</body></html>`` so a single parse sees every
-    body. Returns None unless the input is text with >= 2 ``</html>`` and >= 2 ``<body>``.
+    body. Returns None unless the input is text with >= 2 ``</html>`` and >= 1 ``<body>``.
+
+    The >= 1 body case matters when a stub document has a malformed/unclosed ``<body>`` (so only
+    the *real* document's body matches the pair regex) but its content sits after the first
+    ``</html>``, where lxml stops -- e.g. cams.com. Merging the matched body recovers it; the
+    self-correcting caller keeps the larger extraction, so a body lxml already parsed is a no-op.
     """
     if not isinstance(html_text, unicode):
         return None
     if len(_HTML_END_RE.findall(html_text)) < 2:
         return None
     bodies = _BODY_RE.findall(html_text)
-    if len(bodies) < 2:
+    if len(bodies) < 1:
         return None
     return "<html><body>" + "".join(bodies) + "</body></html>"
 
