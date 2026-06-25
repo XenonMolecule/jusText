@@ -152,10 +152,23 @@ Fresh random sample, disjoint from all other splits. Baseline is in line with de
 the fork generalizes well; modern JS frameworks are NOT a major failure mode.
 - **Framework prevalence:** React 15 (4 bad), Angular 35 (3), Vue 5 (0), Ember 86 (7),
   JS-state-blob 203 (16). SPAs are a minority and mostly the already-detected JSON-blob case (0075).
-- **TOP OPPORTUNITY — CONTENTdm digital libraries (NEXT CYCLE):** 4+ docs at F1=0.00, all
-  `…/digital/collection/…` (digitalhorizonsonline.org, digital.lib.uidaho.edu,
-  history.westlakelibrary.org, np3.augie.edu). Recognizable platform like DSpace (0082) — build a
-  gated handler. Likely the biggest single dev3 win.
+- **CONTENTdm digital libraries (INVESTIGATED — recoverable but heterogeneous):** content is in
+  `window.__INITIAL_STATE__ = JSON.parse('…')` (JS-escaped JSON; decode via
+  `m.group(1).encode().decode('unicode_escape')` then `json.loads`), NOT the DOM. But the gold's
+  source FIELD differs per page type:
+  - `item.item.text` (OCR full text): westlakelibrary gold≈text → emit gives **0.00→0.99**;
+    uidaho gold is a clean PREFIX of a 49k OCR (gold truncated the long newspaper) → full-text
+    emit only 0.19, prefix 0.98 (can't replicate the cut point).
+  - `collection.pageText` (collection landing HTML, needs tag-strip): augie.
+  - item `fields[0].value` (Title) + short `item.item.text` (caption): digitalhorizons (a photo).
+  A handler needs 3 branches (item-OCR / collection-landing / item-metadata) + the uidaho
+  gold-truncation is a wall. Clean slice = item-OCR-text branch (westlake clean, uidaho partial).
+  Only ~4 dev3 docs; check train/test CONTENTdm count before investing in all branches.
+- **Encoding (U+FFFD) is upstream, NOT jusText:** 131/2000 dev3 docs carry baked-in U+FFFD from the
+  WARC→raw_html decode step (decoding bytes as UTF-8 + errors=replace, ignoring the declared/HTTP
+  charset — comune.napoli.it even declares ISO-8859-1 and was still corrupted). Unrecoverable once
+  baked in. Fix is in the extraction pipeline per WARC-decoding-recommendations.md (w3lib
+  html_to_unicode, windows-1252 fallback, drop errors=replace). Not a jusText cycle.
 - Other worst docs: naver.com Korean dict (tiny gold, foreign), yammer (gold≫html, JS/login wall),
   weatherbug/brighttalk (JS), several wordpress tag/author listing pages (queenslib, gonzotown —
   listing-page over/under-extraction). Triage in a later cycle.
