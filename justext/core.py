@@ -1482,7 +1482,7 @@ def _comment_author_meta(dom):
         '//*[self::li or self::article or self::div][starts-with(@id, "comment-")]'
         '[.//*[contains(@class,"comment-content") or contains(@class,"comment-body")]]')
     if len(comments) < 2:
-        return []
+        return _movabletype_comment_meta(dom)
     out = []
     for c in comments:
         cls = (c.get("class") or "").lower()
@@ -1503,6 +1503,32 @@ def _comment_author_meta(dom):
                 date = match.group(0)
                 break
         body = c.xpath('.//*[contains(@class,"comment-content") or contains(@class,"comment-body")]')
+        if author and body:
+            out.append((re.sub(r"\s+", " ", body[0].text_content()).strip(), author, date))
+    if out:
+        return out
+    return _movabletype_comment_meta(dom)
+
+
+# Movable Type blog comments (sauer-thompson): each comment is a `div.comment-content` body
+# followed by a `p.comment-footer` byline "Posted by: <name> | <date>". The author/date come
+# AFTER the body, so the WordPress wrapper-id scan above misses them.
+_MT_BYLINE = re.compile(r"Posted by:\s*(.+?)\s*\|\s*(.+)$", re.S)
+
+
+def _movabletype_comment_meta(dom):
+    """[(body_text, author, date)] for Movable Type comments, or [] if <2."""
+    footers = dom.xpath('//p[contains(@class,"comment-footer")]')
+    if len(footers) < 2:
+        return []
+    out = []
+    for footer in footers:
+        match = _MT_BYLINE.search(re.sub(r"\s+", " ", footer.text_content()).strip())
+        if not match:
+            continue
+        author, date = match.group(1).strip(), _clean_forum_date(match.group(2).strip())
+        # The body is the comment-content that immediately precedes this footer.
+        body = footer.xpath('preceding-sibling::*[contains(@class,"comment-content")][1]')
         if author and body:
             out.append((re.sub(r"\s+", " ", body[0].text_content()).strip(), author, date))
     return out
@@ -1536,8 +1562,15 @@ def prepend_comment_authors(paragraphs, meta):
                 break
     if inserts:
         # The gold opens the kept comment section with a "**Comments**" heading (100% of
-        # comment-keep docs) -- emit it before the first comment marker.
-        inserts.insert(0, (inserts[0][0], _marker_paragraph("**Comments**")))
+        # comment-keep docs) -- emit it before the first comment marker, UNLESS the page already
+        # has a kept "Comments" header of its own (Movable Type's <h3>Comments</h3>), else we'd
+        # duplicate it (sauer-thompson, research log 0085).
+        first_idx = inserts[0][0]
+        has_header = any(
+            not p.is_boilerplate and re.match(r"comments?(\s*\(\d+\))?$", p.text.strip(), re.I)
+            for p in paragraphs[:first_idx])
+        if not has_header:
+            inserts.insert(0, (first_idx, _marker_paragraph("**Comments**")))
     for offset, (idx, marker_paragraph) in enumerate(inserts):
         paragraphs.insert(idx + offset, marker_paragraph)
 
