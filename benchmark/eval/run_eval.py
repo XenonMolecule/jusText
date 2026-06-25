@@ -40,7 +40,7 @@ sys.path.insert(0, os.path.dirname(BENCH_DIR))
 import justext  # noqa: E402
 from metrics import score_pair  # noqa: E402
 
-DATASETS_DIR = os.path.join(BENCH_DIR, "datasets")
+DATASETS_DIR = os.environ.get("JUSTEXT_DATASETS_DIR", os.path.join(BENCH_DIR, "datasets"))
 DEFAULT_DATASET = "general"
 PARAGRAPH_SEPARATOR = "\n\n"
 

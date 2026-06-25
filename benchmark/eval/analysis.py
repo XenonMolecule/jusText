@@ -25,7 +25,7 @@ from statistics import mean, median
 _HERE = os.path.dirname(os.path.abspath(__file__))
 BENCH_DIR = os.path.dirname(_HERE)
 RUNS_DIR = os.path.join(BENCH_DIR, "runs")
-DATASETS_DIR = os.path.join(BENCH_DIR, "datasets")
+DATASETS_DIR = os.environ.get("JUSTEXT_DATASETS_DIR", os.path.join(BENCH_DIR, "datasets"))
 DEFAULT_DATASET = "general"
 
 _NON_ASCII_ALPHA = re.compile(r"[^\x00-\x7f]")
