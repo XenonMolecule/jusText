@@ -129,6 +129,24 @@ candidates; two are the known low-stopword recall wall.
   in the raw source (thejournal `BehindAct`/`aswell` — print-to-HTML artifact, gold fixed from
   context, unrecoverable).
 
+## Metafilter engine handler (2026-06-25, DESIGNED, ready to build)
+ask.metafilter.com / metafilter.com — 1 dev2 + 4 train docs. Gold puts the **commenter to the
+front** (matches user preference): `**username** (TIME, DATE):` before each comment, with a `---`
+separator after the question. Current F1 0.891 (233299).
+- **Structure:** title from `h1` (strip trailing "January 16, 2013 2:50 PM Subscribe"); question
+  body from `div.copy` (not `.smallcopy`); each comment is a `div.comments` whose trailing
+  `span.smallcopy` byline is `posted by <user> at <TIME> on <DATE> [N favorite(s)]`. Skip the
+  nav div (`« Older … |`) and the "This thread is closed to new comments." div.
+- **Byline parse:** `posted by (.+?) at (.+?) on (.+?)(?: \[(\d+) favorite)?` → user/time/date/favs.
+- **USER DECISION (recorded):** KEEP favorites (quality over metric) — the gold drops them, so
+  appending `[N favorites]` to the marker will slightly regress F1/Lev on the 5 metafilter docs.
+  This is an authorized exception to no-regression, scoped to metafilter only. Marker form:
+  `**user** (TIME, DATE) [N favorites]:`.
+- **Build like the forum engines** (own meta reader, NOT `_forum_thread_paragraphs` — question has
+  no author marker + there's a `---` separator). Prototype offline vs all 5 docs first; gate tightly
+  on the `posted by … at … on …` byline so nothing else fires. Verify dev/train aggregate stays
+  ~flat (5 docs × small regression = negligible) and NO non-metafilter doc moves.
+
 ## Methodology
 - When out of fix ideas: sample ~5 partial-F1 docs, look for a common error, fix it. This has
   repeatedly surfaced wins we'd deemed impossible (mojibake, spacing, br, emails).
