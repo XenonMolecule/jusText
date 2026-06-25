@@ -147,6 +147,19 @@ separator after the question. Current F1 0.891 (233299).
   on the `posted by … at … on …` byline so nothing else fires. Verify dev/train aggregate stays
   ~flat (5 docs × small regression = negligible) and NO non-metafilter doc moves.
 
+## dev3 survey (2026-06-25) — baseline F1 0.8821 / Lev 0.8203 (2000 docs, 2013-2022 snapshots)
+Fresh random sample, disjoint from all other splits. Baseline is in line with dev2 (0.8804) —
+the fork generalizes well; modern JS frameworks are NOT a major failure mode.
+- **Framework prevalence:** React 15 (4 bad), Angular 35 (3), Vue 5 (0), Ember 86 (7),
+  JS-state-blob 203 (16). SPAs are a minority and mostly the already-detected JSON-blob case (0075).
+- **TOP OPPORTUNITY — CONTENTdm digital libraries (NEXT CYCLE):** 4+ docs at F1=0.00, all
+  `…/digital/collection/…` (digitalhorizonsonline.org, digital.lib.uidaho.edu,
+  history.westlakelibrary.org, np3.augie.edu). Recognizable platform like DSpace (0082) — build a
+  gated handler. Likely the biggest single dev3 win.
+- Other worst docs: naver.com Korean dict (tiny gold, foreign), yammer (gold≫html, JS/login wall),
+  weatherbug/brighttalk (JS), several wordpress tag/author listing pages (queenslib, gonzotown —
+  listing-page over/under-extraction). Triage in a later cycle.
+
 ## Methodology
 - When out of fix ideas: sample ~5 partial-F1 docs, look for a common error, fix it. This has
   repeatedly surfaced wins we'd deemed impossible (mojibake, spacing, br, emails).
