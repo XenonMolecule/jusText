@@ -256,6 +256,23 @@ def fix_doubled_list_numbers(paragraphs):
         marker_p.class_type = "bad"
 
 
+# A kept paragraph that is nothing but a UI control / dangling byline prefix -- the button
+# label or "By <author>" whose target was JS-injected (and so empty in a static snapshot) or
+# dropped, leaving e.g. a bare "By" from a dead Twitter widget (slysa) or "Share"/"Read More"
+# (theoutbound, plantengineering). "Author"/"Comments" are deliberately EXCLUDED: they double as
+# real content -- "Author" is a metadata field label in some gold (wiki.call-cc), "Comments" is a
+# kept thread marker (research log 0083 batch / 0084).
+_ORPHAN_UI_LABEL = re.compile(
+    r"^(?:By|by|Share|Tweet|Like|Follow|Reply|Full Story|Read More|Read more|Posted by)$")
+
+
+def drop_orphan_ui_labels(paragraphs):
+    """In-place: drop kept paragraphs that are a lone UI label with no content."""
+    for paragraph in paragraphs:
+        if not paragraph.is_boilerplate and _ORPHAN_UI_LABEL.match(paragraph.text.strip()):
+            paragraph.class_type = "bad"
+
+
 # Unrendered MediaWiki markup (research log 0045). Some wiki pages (`index.php?title=...`
 # source views) leak raw wikitext into the output -- `[[Link|text]]`, `{{templates}}`,
 # `'''bold'''`, `== headings ==` -- which the gold renders to clean text. Strip the markup
@@ -1611,6 +1628,7 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
     merge_uniform_table_rows(paragraphs)
     fix_orphaned_list_markers(paragraphs)
     fix_doubled_list_numbers(paragraphs)
+    drop_orphan_ui_labels(paragraphs)
     prepend_comment_authors(paragraphs, comment_meta)
 
     if fix_encoding:
