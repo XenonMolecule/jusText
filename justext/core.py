@@ -57,6 +57,10 @@ PARAGRAPH_TAGS = frozenset({
 # row/list paragraph, separated by a space, so a <tr> becomes one row and a <ul> one
 # block. This raised the general oracle F1 0.893->0.902 and Lev 0.822->0.838.
 SEPARATOR_TAGS = frozenset({
+    # <img> is a replaced inline element: an image BETWEEN two words (no surrounding
+    # whitespace) mashed them together -- "Enhancing<img>Education" -> "EnhancingEducation"
+    # (thejournal). Treat it like a cell separator so the words stay apart (research log 0083).
+    'img',
     'td', 'th', 'li', 'dd', 'dt', 'option', 'caption',
 })
 _STRUCTURAL_LIST = ("nav", "menu", "tab", "crumb", "pag", "sidebar", "widget", "toolbar",
@@ -533,6 +537,13 @@ class ParagraphMaker(ContentHandler):
                 # lists/publications). normalize_whitespace keeps the \n because the
                 # run contains a newline (research log 0025). <br><br> still becomes a
                 # paragraph break via the name=="br" and self.br branch above.
+                self.paragraph.append_text('\n')
+            elif name == 'address':
+                # <address> is block-level; adjacent contact blocks (officer lists, etc.)
+                # were glued -- "Treasurer</address><address>Julia" -> "TreasurerJulia"
+                # (pajcisenate). The gold puts each on its own line, so emit a newline like
+                # <br> -- a line break within the block, not a paragraph split that would let
+                # the classifier drop rows piecemeal (research log 0083).
                 self.paragraph.append_text('\n')
             elif name == 'a':
                 self.link = True

@@ -116,6 +116,19 @@ candidates; two are the known low-stopword recall wall.
   blog comment thread; check `_comment_author_meta`/`prepend_comment_authors` coverage (0068/0070)
   — the commenter byline may be in a structure those selectors miss.
 
+## More user-flagged docs (2026-06-25, batch 3)
+- **leanpub.com/pythontesting/read** — partial table-of-contents with rows **selectively dropped**.
+  User: "if we are going to include a part of a TOC it is really bad to start dropping rows
+  selectively." Same selective-drop pathology as the cji dates / drive price-table (classifier
+  keeps some near-uniform list rows, drops others). All-or-nothing for a TOC would be better.
+  Possibly addressable via `merge_uniform_table_rows`-style cohesion (0051) applied to TOC `<li>`
+  lists. Check structure.
+- **thejournal.com / pajcisenate.org** — SPACING (in progress, research log 0083): words glued at
+  inline-element boundaries (`Enhancing<img>Education`) and adjacent block elements not in the
+  paragraph/separator tag sets (`<address>` contact blocks → `TreasurerJulia`). NB some gluing is
+  in the raw source (thejournal `BehindAct`/`aswell` — print-to-HTML artifact, gold fixed from
+  context, unrecoverable).
+
 ## Methodology
 - When out of fix ideas: sample ~5 partial-F1 docs, look for a common error, fix it. This has
   repeatedly surfaced wins we'd deemed impossible (mojibake, spacing, br, emails).
