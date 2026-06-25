@@ -951,6 +951,13 @@ def vbulletin_paragraphs(dom, include_comments=True):
     return _forum_thread_paragraphs(dom, posts)
 
 
+# Fallback forum-date for phpBB skins that don't use the "by X on DATE" wording -- e.g. the
+# WP-integrated theme whose byline is "Wed Oct 15, 2008 10:52 am by don" (date *before* the
+# author). Matches "Mon DD, YYYY [HH:MM am]" with an optional leading weekday (research log 0072).
+_PHPBB_DATE = re.compile(
+    r"(?:[A-Z][a-z]{2}\s+)?[A-Z][a-z]{2,8}\s+\d{1,2},?\s+\d{4}(?:\s+\d{1,2}:\d{2}\s*[ap]m)?", re.I)
+
+
 def phpbb_paragraphs(dom, include_comments=True):
     """Role-prefixed paragraphs for a phpBB forum thread, or None if not one.
 
@@ -971,11 +978,25 @@ def phpbb_paragraphs(dom, include_comments=True):
             continue
         date = ""
         if authors:
-            match = re.search(r"(?:\bon\b|»)\s+(.+)$", re.sub(r"\s+", " ", authors[0].text_content()).strip())
+            text = re.sub(r"\s+", " ", authors[0].text_content()).strip()
+            match = re.search(r"(?:\bon\b|»)\s+(.+)$", text)
             if match:
                 date = _clean_forum_date(match.group(1))
-        body_paras = [p for p in ParagraphMaker.make_paragraphs(_strip_quote_blocks(content[0]))
-                      if p.text.strip()]
+            else:                                  # "DATE by author" skins (research log 0072)
+                match = _PHPBB_DATE.search(text)
+                if match:
+                    date = _clean_forum_date(match.group())
+        body_el = _strip_quote_blocks(content[0])
+        # Some skins wrap the byline + per-post subject heading *inside* `.content`; strip them
+        # so they don't leak into the body. No-op on standard phpBB3 / punbb where the body is
+        # the whole `.content` (research log 0072).
+        for meta in body_el.xpath(
+                './/*[contains(@class,"author")]'
+                ' | .//h3[contains(concat(" ", @class, " "), " first ")]'):
+            parent = meta.getparent()
+            if parent is not None:
+                parent.remove(meta)
+        body_paras = [p for p in ParagraphMaker.make_paragraphs(body_el) if p.text.strip()]
         if body_paras:
             posts.append((username, date, body_paras))
     return _forum_thread_paragraphs(dom, posts)
