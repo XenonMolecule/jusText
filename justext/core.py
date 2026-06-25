@@ -1130,6 +1130,44 @@ def xenforo_paragraphs(dom, include_comments=True):
     return _forum_thread_paragraphs(dom, posts)
 
 
+_JFORUM_DATE = re.compile(r"[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}(?::\d{2})?")
+
+
+def jforum_paragraphs(dom, include_comments=True):
+    """Role-prefixed paragraphs for a JForum thread (coderanch), or None (research log 0077).
+
+    JForum lays each post out as an author block (``.authorName``/``.authorNameNoLink``) and a
+    ``td.postbody`` in separate rows of one table; they're paired by document order. The date
+    is in a nearby ``.postdetails``. Fires only with >=2 posts where authors and bodies match
+    one-to-one (else falls back)."""
+    bodies = dom.xpath('//td[contains(@class, "postbody")]')
+    authors = dom.xpath('//*[contains(@class, "authorName")]')
+    if len(bodies) < 2 or len(authors) != len(bodies):
+        return None
+    posts = []
+    for author_el, body in zip(authors, bodies):
+        name = re.sub(r"\s+", " ", author_el.text_content()).strip()
+        if not name:
+            continue
+        date, anc = "", author_el
+        for _ in range(4):
+            anc = anc.getparent()
+            if anc is None:
+                break
+            for t in anc.xpath('.//*[contains(@class,"postdetails")]//text()'):
+                match = _JFORUM_DATE.search(t)
+                if match:
+                    date = _clean_forum_date(match.group())
+                    break
+            if date:
+                break
+        body_paras = [p for p in ParagraphMaker.make_paragraphs(_strip_quote_blocks(body))
+                      if p.text.strip()]
+        if body_paras:
+            posts.append((name, date, body_paras))
+    return _forum_thread_paragraphs(dom, posts)
+
+
 _POSTED_BY = re.compile(r"Posted by\s+(.+?)\s+on\s+(.+)", re.I)
 
 
@@ -1466,6 +1504,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
             qa_paragraphs = xenforo_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is None:
             qa_paragraphs = workitmom_paragraphs(dom, include_comments=include_comments)
+        if qa_paragraphs is None:
+            qa_paragraphs = jforum_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is not None:
             if fix_encoding:
                 decode_double_entities(qa_paragraphs)
