@@ -1243,6 +1243,54 @@ def workitmom_paragraphs(dom, include_comments=True):
     return _forum_thread_paragraphs(dom, posts)
 
 
+# Ask MetaFilter / MetaFilter (research log 0086). Each answer is a `div.comments` whose trailing
+# `span.smallcopy` byline reads "posted by <user> at <TIME> on <DATE> [N favorite(s)]". The gold
+# moves the commenter to the FRONT as "**user** (TIME, DATE):"; we additionally keep the favorites
+# count (a deliberate quality-over-metric choice -- the gold drops it, but the structural win
+# dominates and the user asked to keep it). Not a `_forum_thread_paragraphs` case: the question
+# has no author marker and the gold separates it from the answers with a "---" rule.
+_MF_BYLINE = re.compile(
+    r"posted by (.+?) at (.+?) on ([A-Z][a-z]+ \d+, \d{4})(?:\s*\[(\d+) favorite)?", re.I)
+_MF_TITLE_DATE = re.compile(r"\s+[A-Z][a-z]+ \d+, \d{4}\b.*$")
+
+
+def metafilter_paragraphs(dom, include_comments=True):
+    """Role-prefixed paragraphs for an Ask MetaFilter / MetaFilter thread, or None."""
+    bylined = []
+    for cdiv in dom.xpath('//div[contains(@class, "comments")]'):
+        spans = cdiv.xpath('.//span[contains(@class, "smallcopy")]')
+        if not spans:
+            continue
+        match = _MF_BYLINE.search(" ".join(spans[-1].text_content().split()))
+        if match:
+            bylined.append((cdiv, spans[-1], match))
+    if len(bylined) < 2:
+        return None
+    paragraphs = []
+    for h1 in dom.xpath('//h1'):                       # question title (the h1 with a date suffix)
+        title = " ".join(h1.text_content().split())
+        if _MF_TITLE_DATE.search(title):
+            paragraphs.append(_marker_paragraph(_MF_TITLE_DATE.sub("", title).strip()))
+            break
+    question = dom.xpath('//div[contains(@class, "copy") and not(contains(@class, "smallcopy"))]')
+    if question:
+        for p in ParagraphMaker.make_paragraphs(question[0]):
+            if p.text.strip():
+                p.class_type = "good"           # handler output is authoritative content
+                paragraphs.append(p)
+    paragraphs.append(_marker_paragraph("---"))
+    for cdiv, span, match in bylined:
+        user, time, date, favs = (match.group(1).strip(), match.group(2).strip(),
+                                   match.group(3).strip(), match.group(4))
+        byline = " ".join(span.text_content().split())
+        body = " ".join(cdiv.text_content().split()).replace(byline, "").strip()
+        favstr = " [%s favorite%s]" % (favs, "" if favs == "1" else "s") if favs else ""
+        paragraphs.append(_marker_paragraph("**%s** (%s, %s)%s:" % (user, time, date, favstr)))
+        if body:
+            paragraphs.append(_marker_paragraph(body))
+    return paragraphs
+
+
 # DSpace repository item-view metadata (research log 0082). The label/value rows live in a
 # ``table.itemDisplayTable``. Most skins render label+value as one block the classifier keeps
 # (lirias.kuleuven, econstor -- already ~0.99); a few split them into separate cells, so the
@@ -1639,6 +1687,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
             qa_paragraphs = workitmom_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is None:
             qa_paragraphs = jforum_paragraphs(dom, include_comments=include_comments)
+        if qa_paragraphs is None:
+            qa_paragraphs = metafilter_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is not None:
             if fix_encoding:
                 decode_double_entities(qa_paragraphs)
