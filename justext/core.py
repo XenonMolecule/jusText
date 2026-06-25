@@ -1496,3 +1496,33 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         clean_wiki_markup(paragraphs)
 
     return paragraphs
+
+
+_SCRIPT_RE = re.compile(r"<script\b[^>]*>(.*?)</script>", re.S | re.I)
+
+
+def needs_javascript_render(html, paragraphs, min_content=300,
+        min_script_fraction=0.30, min_html=20000):
+    """Heuristic: does this page look client-side-rendered (content only reachable via JS)?
+
+    True only when a *large*, *script-heavy* page yields *almost no* extracted content -- the
+    signature of a data-driven SPA whose body sits in a JS state blob (research log 0075). The
+    caller can route those few pages to a headless browser that executes JS, then re-run
+    jusText on the rendered HTML. (A non-JS text browser like lynx won't recover it -- the
+    content is never in the served markup.) Pass the ``paragraphs`` from ``justext()``.
+
+    Defaults flag ~0.3% of general/dev at 100% precision (iheart, countryliving, webdeveloper).
+    Cheap: the script scan only runs once the content is already known to be tiny.
+    """
+    try:
+        html_len = len(html)
+    except TypeError:
+        return False
+    if html_len < min_html:
+        return False
+    content_chars = sum(len(p.text) for p in paragraphs if not p.is_boilerplate)
+    if content_chars >= min_content:
+        return False
+    text = html if isinstance(html, unicode) else html.decode("latin-1", "ignore")
+    script_chars = sum(len(m) for m in _SCRIPT_RE.findall(text))
+    return script_chars / max(html_len, 1) > min_script_fraction

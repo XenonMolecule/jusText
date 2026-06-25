@@ -9,7 +9,7 @@ This software is licensed as described in the file LICENSE.rst.
 from __future__ import absolute_import
 
 from .utils import get_stoplists, get_stoplist
-from .core import justext
+from .core import justext, needs_javascript_render
 from .classifier import ParagraphClassifier
 from ._models import get_model, download_fasttext
 
