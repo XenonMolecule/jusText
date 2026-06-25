@@ -27,3 +27,13 @@ The user prefers recall (less under-extraction) over precision. Lowering the kee
 (dev2 300-doc sample): thr=0.42 F1 −0.006 (15 up / 44 down); thr=0.35 F1 −0.016 (20 up /
 84 down). The blunt global tradeoff regresses 3× more docs than it recovers (the over-extraction
 the user cautioned against). Classifier is already near-optimal; not shipped.
+
+## Iter 10 — heuristic-override for long link-free blocks (NEGATIVE)
+monroecounty.gov / informatics.jax.org drop long, link-free, low-stopword content (address
+lists, gene terms) that the *heuristic* keeps but the *ML model* drops. Tested override: keep a
+paragraph when heuristic=good AND ML=bad AND len>200 AND link<0.1. Result (full sets): dev2
+−0.0045 (+14/−115), dev −0.0031 (+12/−92). Same failure mode as the threshold lever — it re-adds
+long link-free boilerplate (disclaimers, related-content, footers) on ~8× more docs than it
+recovers. The ML model's low-stopword dropping is correct on balance; classifier is calibrated.
+Not shipped. Recall-boosting levers (threshold, heuristic-override) are both net-negative; only
+structural/handler one-offs (0076/0081 multi-doc, forum engines) ship cleanly.
