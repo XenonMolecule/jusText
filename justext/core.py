@@ -297,7 +297,7 @@ def html_to_dom(html, default_encoding=DEFAULT_ENCODING, encoding=None, errors=D
         decoded_html = decode_html(html, default_encoding, encoding, errors)
 
     # Empty / whitespace-only input parses to "Document is empty" in lxml -- return an empty
-    # document so justext() yields no paragraphs instead of raising (research log 0071).
+    # document so justext() yields no paragraphs instead of raising.
     if not decoded_html or not decoded_html.strip():
         return lxml.html.fromstring("<html></html>")
 
@@ -1109,6 +1109,35 @@ def xenforo_paragraphs(dom, include_comments=True):
     return _forum_thread_paragraphs(dom, posts)
 
 
+_POSTED_BY = re.compile(r"Posted by\s+(.+?)\s+on\s+(.+)", re.I)
+
+
+def workitmom_paragraphs(dom, include_comments=True):
+    """Role-prefixed paragraphs for a Drupal-style group/forum thread, or None (research log
+    0071). Posts are ``li[id^=post_]``; the body is ``div.body`` and the author + date come
+    from a ``.comment-by`` line of the form "Posted by <name> on <date>". Fires only with >=2
+    such posts (else falls back to the normal path)."""
+    posts_li = dom.xpath('//li[starts-with(@id, "post_")][.//*[contains(@class, "comment-by")]]')
+    if len(posts_li) < 2:
+        return None
+    posts = []
+    for li in posts_li:
+        cb = li.xpath('.//*[contains(@class, "comment-by")]')
+        if not cb:
+            continue
+        match = _POSTED_BY.search(re.sub(r"\s+", " ", cb[0].text_content()).strip())
+        if not match:
+            continue
+        author, date = match.group(1).strip(), _clean_forum_date(match.group(2))
+        body = li.xpath('.//div[contains(concat(" ", @class, " "), " body ")]')
+        if not body:
+            continue
+        body_paras = [p for p in ParagraphMaker.make_paragraphs(body[0]) if p.text.strip()]
+        if body_paras:
+            posts.append((author, date, body_paras))
+    return _forum_thread_paragraphs(dom, posts)
+
+
 def _table_xpath_key(xpath):
     """Return the xpath prefix up to and including the innermost ``table[N]`` segment,
     or None if the path is not inside a table. Used to group sibling table rows."""
@@ -1414,6 +1443,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
             qa_paragraphs = bbpress_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is None:
             qa_paragraphs = xenforo_paragraphs(dom, include_comments=include_comments)
+        if qa_paragraphs is None:
+            qa_paragraphs = workitmom_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is not None:
             if fix_encoding:
                 decode_double_entities(qa_paragraphs)
