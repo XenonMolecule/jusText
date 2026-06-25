@@ -10,6 +10,7 @@ from __future__ import absolute_import
 from __future__ import division, print_function, unicode_literals
 
 import copy
+import json
 import re
 import lxml.html
 import lxml.sax
@@ -1291,6 +1292,40 @@ def metafilter_paragraphs(dom, include_comments=True):
     return paragraphs
 
 
+# CONTENTdm digital library (research log 0087). CONTENTdm renders the item client-side: the
+# digitized full text lives in `window.__INITIAL_STATE__.item.item.text`, NOT the DOM, so jusText
+# otherwise extracts nothing (F1 0.00). Recover the OCR text for items that carry it.
+_CDM_STATE = re.compile(r"window\.__INITIAL_STATE__\s*=\s*JSON\.parse\('(.+?)'\);", re.S)
+
+
+def contentdm_paragraphs(dom, include_comments=True):
+    """The OCR/full text of a CONTENTdm item from its __INITIAL_STATE__ blob, or None.
+
+    Fires only for an item with the CONTENTdm `collectionAlias` key and substantial text, so the
+    203-doc field of other `__INITIAL_STATE__` SPAs -- and CONTENTdm image/metadata-only items
+    whose text field is empty -- fall through to normal extraction untouched.
+    """
+    for script in dom.xpath('//script'):
+        source = script.text or ""
+        if "__INITIAL_STATE__" not in source:
+            continue
+        match = _CDM_STATE.search(source)
+        if not match:
+            return None
+        try:
+            data = json.loads(match.group(1).encode().decode("unicode_escape"))
+        except Exception:
+            return None
+        item = (data.get("item") or {}).get("item") or {}
+        if "collectionAlias" not in item:
+            return None
+        text = (item.get("text") or "").strip()
+        if len(text) < 400:
+            return None
+        return [_marker_paragraph(text)]
+    return None
+
+
 # DSpace repository item-view metadata (research log 0082). The label/value rows live in a
 # ``table.itemDisplayTable``. Most skins render label+value as one block the classifier keeps
 # (lirias.kuleuven, econstor -- already ~0.99); a few split them into separate cells, so the
@@ -1689,6 +1724,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
             qa_paragraphs = jforum_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is None:
             qa_paragraphs = metafilter_paragraphs(dom, include_comments=include_comments)
+        if qa_paragraphs is None:
+            qa_paragraphs = contentdm_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is not None:
             if fix_encoding:
                 decode_double_entities(qa_paragraphs)
