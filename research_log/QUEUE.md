@@ -105,6 +105,17 @@ candidates; two are the known low-stopword recall wall.
   chrome" from "repeated template wrapping unique data"; same wall as the threshold/heuristic levers
   (research_log 0079, both NEGATIVE).
 
+## More user-flagged docs (2026-06-25, batch 2)
+- **ask.metafilter.com/233299** — parses well already, but user prefers the **commenter name
+  before the comment** (role-transform like the forum engines). User also likes that the
+  **favorites count** and metadata are kept — so the fix is reorder-to-front, NOT dropping the
+  numbers. MetaFilter/AskMe is its own engine (`.comments`, commenter in a byline). Candidate
+  role-transform handler; check the gold actually fronts the commenter before building.
+- **sauer-thompson.com/archives/opinion/2012/12/a-downbeat-nati.php** — missing **comment
+  attribution** (who said each comment), "pretty critically important" per user. Movable Type /
+  blog comment thread; check `_comment_author_meta`/`prepend_comment_authors` coverage (0068/0070)
+  — the commenter byline may be in a structure those selectors miss.
+
 ## Methodology
 - When out of fix ideas: sample ~5 partial-F1 docs, look for a common error, fix it. This has
   repeatedly surfaced wins we'd deemed impossible (mojibake, spacing, br, emails).

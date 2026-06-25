@@ -1215,6 +1215,57 @@ def workitmom_paragraphs(dom, include_comments=True):
     return _forum_thread_paragraphs(dom, posts)
 
 
+# DSpace repository item-view metadata (research log 0082). The label/value rows live in a
+# ``table.itemDisplayTable``. Most skins render label+value as one block the classifier keeps
+# (lirias.kuleuven, econstor -- already ~0.99); a few split them into separate cells, so the
+# link-dense author value is dropped, leaving a bare "Authors" label (hub.hku.hk 0.87).
+_DSPACE_BARE_LABEL = re.compile(
+    r"^(Authors?|Title|Citation|Issue Date|Abstract|Keywords?|Publisher"
+    r"|Persistent Identifier)$")
+
+
+def _dspace_metadata(dom):
+    """DSpace item metadata as gold-style lines (Title -> heading, authors joined with '; ',
+    every other row -> 'Label: value'), or None if the page has no ``itemDisplayTable``.
+
+    Read from the raw DOM before preprocessing (links must survive). Only *applied* when the
+    base extraction shows the split-cell failure -- see the gate in ``justext`` -- so the
+    skins the classifier already handles well are left untouched.
+    """
+    tables = dom.xpath('//table[contains(@class, "itemDisplayTable")]')
+    if not tables:
+        return None
+    lines = []
+    for row in tables[0].xpath('./tr | ./tbody/tr'):
+        cells = row.xpath('./td | ./th')
+        if len(cells) < 2:
+            continue
+        label = " ".join(cells[0].text_content().split()).rstrip(":").strip()
+        value_cell = cells[-1]
+        links = value_cell.xpath('.//a')
+        if label.lower() in ("author", "authors") and len(links) >= 2:
+            value = "; ".join(" ".join(a.text_content().split()) for a in links
+                              if a.text_content().strip())
+        else:
+            value = " ".join(value_cell.text_content().split())
+        if not label or not value:
+            continue
+        lines.append(value if label.lower() == "title" else "%s: %s" % (label, value))
+    for holder in dom.xpath('//*[strong[contains(text(), "Appears in Collections")]]'):
+        cols = [" ".join(a.text_content().split()) for a in holder.xpath('.//a')]
+        if cols:
+            lines.append("Appears in Collections: " + "; ".join(cols))
+        break
+    return lines or None
+
+
+def _has_bare_dspace_label(paragraphs):
+    """True if a kept paragraph is exactly a DSpace metadata label with no value -- the
+    split-cell failure where the value (e.g. link-dense authors) was dropped."""
+    return any(not p.is_boilerplate and _DSPACE_BARE_LABEL.match(p.text.strip())
+               for p in paragraphs)
+
+
 def _table_xpath_key(xpath):
     """Return the xpath prefix up to and including the innermost ``table[N]`` segment,
     or None if the path is not inside a table. Used to group sibling table rows."""
@@ -1506,6 +1557,9 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
     # Read blog-comment authors from the raw DOM now (the header is dropped during
     # classification); applied post-classification to comments the model keeps. [] otherwise.
     comment_meta = _comment_author_meta(dom)
+    # DSpace metadata table, read before preprocessing (the author links must survive); only
+    # applied below if the base extraction shows the split-cell failure (research log 0082).
+    dspace_lines = _dspace_metadata(dom)
 
     # Q&A forums (StackExchange): rewrite role+author before each post body (0031).
     if forum_qa:
@@ -1552,6 +1606,15 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         decode_double_entities(paragraphs)
         repair_replacement_chars(paragraphs)
         clean_wiki_markup(paragraphs)
+
+    # DSpace split-cell skins (research log 0082): the metadata table left a bare "Authors"
+    # label (its link-dense value dropped). Rebuild the labeled block from the raw table.
+    if dspace_lines is not None and _has_bare_dspace_label(paragraphs):
+        dspace = [_marker_paragraph(line) for line in dspace_lines]
+        if fix_encoding:
+            decode_double_entities(dspace)
+            repair_replacement_chars(dspace)
+        return dspace
 
     # Concatenated documents (research log 0076): some WARC captures glue a redirect stub plus
     # the real page (or several pages) into one html with multiple <html>...</html>. lxml stops
