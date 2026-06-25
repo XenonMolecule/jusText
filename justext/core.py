@@ -956,6 +956,8 @@ def vbulletin_paragraphs(dom, include_comments=True):
 # author). Matches "Mon DD, YYYY [HH:MM am]" with an optional leading weekday (research log 0072).
 _PHPBB_DATE = re.compile(
     r"(?:[A-Z][a-z]{2}\s+)?[A-Z][a-z]{2,8}\s+\d{1,2},?\s+\d{4}(?:\s+\d{1,2}:\d{2}\s*[ap]m)?", re.I)
+# Non-author link labels in a phpBB `.author` line (post-icon, action links).
+_PHPBB_NONAUTHOR = re.compile(r"^(?:post|reply|quote|edit|report|top|profile|pm|email|www)$", re.I)
 
 
 def phpbb_paragraphs(dom, include_comments=True):
@@ -971,8 +973,24 @@ def phpbb_paragraphs(dom, include_comments=True):
     posts = []
     for postbody in postbodies:
         authors = postbody.xpath('.//*[contains(@class,"author")]')
-        links = authors[0].xpath('.//a//text()') if authors else []
-        username = links[0].strip() if links else ""
+        username = ""
+        if authors:
+            # Newer phpBB skins put a post-icon link ("Post", wrapping an imageset/icon span)
+            # BEFORE the real author link, so links[0] was wrongly used as the name (every post
+            # titled "Post" -- research log 0080). Skip icon links and generic-label links; the
+            # author is the first remaining link, or the "by <name> »" text as a fallback.
+            for a in authors[0].xpath('.//a'):
+                if a.xpath('.//*[contains(@class,"imageset") or contains(@class,"icon")]'):
+                    continue
+                text = a.text_content().strip()
+                if text and not _PHPBB_NONAUTHOR.match(text):
+                    username = text
+                    break
+            if not username:
+                match = re.search(r"\bby\s+(.+?)\s*»",
+                                  re.sub(r"\s+", " ", authors[0].text_content()))
+                if match:
+                    username = match.group(1).strip()
         content = postbody.xpath('.//*[contains(@class,"content")]')
         if not username or not content:
             continue
