@@ -1413,7 +1413,7 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         max_heading_distance=MAX_HEADING_DISTANCE_DEFAULT, no_headings=NO_HEADINGS_DEFAULT,
         encoding=None, default_encoding=DEFAULT_ENCODING,
         enc_errors=DEFAULT_ENC_ERRORS, preprocessor=preprocessor, model=AUTO_MODEL,
-        fix_encoding=True, forum_qa=True, include_comments=True):
+        fix_encoding=True, forum_qa=True, include_comments=True, remerge=True):
     """
     Converts an HTML page into a list of classified paragraphs. Each paragraph
     is represented as instance of class ˙˙justext.paragraph.Paragraph˙˙.
@@ -1495,7 +1495,45 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         repair_replacement_chars(paragraphs)
         clean_wiki_markup(paragraphs)
 
+    # Concatenated documents (research log 0076): some WARC captures glue a redirect stub plus
+    # the real page (or several pages) into one html with multiple <html>...</html>. lxml stops
+    # at the first </html> and can drop the real content. Re-extract from the merged bodies and
+    # keep whichever yields more content -- self-correcting, so it never regresses the cases
+    # lxml already handled. Only runs on the few multi-document pages.
+    if remerge:
+        merged = _merge_html_documents(html_text)
+        if merged is not None:
+            alt = justext(merged, stoplist, length_low, length_high, stopwords_low,
+                stopwords_high, max_link_density, max_heading_distance, no_headings,
+                encoding, default_encoding, enc_errors, preprocessor, model, fix_encoding,
+                forum_qa, include_comments, remerge=False)
+            kept = sum(len(p.text) for p in paragraphs if not p.is_boilerplate)
+            kept_alt = sum(len(p.text) for p in alt if not p.is_boilerplate)
+            if kept_alt > kept:
+                return alt
+
     return paragraphs
+
+
+_BODY_RE = re.compile(r"<body\b[^>]*>(.*?)</body\s*>", re.S | re.I)
+_HTML_END_RE = re.compile(r"</html\s*>", re.I)
+
+
+def _merge_html_documents(html_text):
+    """Glue the <body> contents of a multi-`<html>` page into one document, or None.
+
+    WARC captures sometimes concatenate several documents (a redirect stub + the real page);
+    this returns ``<html><body>...all bodies...</body></html>`` so a single parse sees every
+    body. Returns None unless the input is text with >= 2 ``</html>`` and >= 2 ``<body>``.
+    """
+    if not isinstance(html_text, unicode):
+        return None
+    if len(_HTML_END_RE.findall(html_text)) < 2:
+        return None
+    bodies = _BODY_RE.findall(html_text)
+    if len(bodies) < 2:
+        return None
+    return "<html><body>" + "".join(bodies) + "</body></html>"
 
 
 _SCRIPT_RE = re.compile(r"<script\b[^>]*>(.*?)</script>", re.S | re.I)
