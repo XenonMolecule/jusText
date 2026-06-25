@@ -77,6 +77,34 @@ gain on the wiki docs. Gold is inconsistent on the rest too: wikitravel KEEPS `*
 thejapanesepage/openwetware DROP the bulleted section entirely (content-selection). So no
 gold-consistent strip exists. Confirmed gold-typography/content-selection wall.
 
+## dev2 spot-check batch (2026-06-25, user-flagged — diagnosed, not yet fixed)
+All four are in `datasets_rawhtml/general/dev2`, scored with `general-ftstack`. Two are clean-fix
+candidates; two are the known low-stopword recall wall.
+
+- **slysa.org** (`com_community` JomSocial/SP Page Builder, F1 0.869) — **CANDIDATE (over-extraction
+  cleanup)**. Leaks orphan UI-label paragraphs: two `By` (from dead `sp-tweet` Twitter widgets whose
+  message/author/date are JS-injected → hollow in the snapshot, only the template word "By" survives)
+  + `Full Story` (an `sp-readmore` link between showcase title and body). Scan: **7 dev2 docs** emit a
+  bare label-only paragraph (`By`/`by`/`Author`/`Share`/`Read More`/`Full Story`): plantengineering,
+  defenseone, allaboutjazz, call-cc wiki, accesstoinsight, theoutbound, slysa. Proposed fix: drop a
+  kept paragraph whose entire text is a single known UI label. Low risk (these are never gold content).
+  Secondary leaks (poll widget, missing `...` on JS-truncated previews) are JS-render artifacts — skip.
+- **hub.hku.hk/handle/10722/231252** (DSpace repository, F1 0.872) — **CANDIDATE (under-extraction,
+  user priority)**. Drops the `Authors: NIU, Y; Lu, W; LIU, D; CHEN, K` metadata row. Authors are
+  `<a class="author">` links in the DSpace `ds-` item-view table (also present as `DC.creator` /
+  `citation_author` metas); gold joins them "Authors: a; b; c". The metadata table (Authors / Issue
+  Date / Citation) is dropped as link-dense/low-stopword. Proposed fix: a DSpace item-view handler
+  (recognizable platform, like the forum engines) that emits the labeled metadata rows. Worth a real try.
+- **drive.com.au/motor-news/land-rover…** (F1 0.870, nHTML=4 multi-doc) — **RECALL WALL**. Missing a
+  price table rendered WITHOUT `<table>` (no table elements): `TD4 (Man) $44,990 / XS I6 $49,990 / …`.
+  Short low-stopword model→price lines dropped by the classifier. Same class as cji/monroe/all-science.
+- **cji.edu/…/methamphetamine-awareness** (F1 0.884) — **RECALL/DEDUP WALL**. Drops half the
+  `Registration ends 12pm (noon) <Month> <day>, 2017` lines (and whole Oct/Nov sessions). They're
+  near-identical template text (low-stopword, repetitive) so the classifier reads them as boilerplate —
+  but the unique date each carries is the information-dense part. No clean signal separates "repeated
+  chrome" from "repeated template wrapping unique data"; same wall as the threshold/heuristic levers
+  (research_log 0079, both NEGATIVE).
+
 ## Methodology
 - When out of fix ideas: sample ~5 partial-F1 docs, look for a common error, fix it. This has
   repeatedly surfaced wins we'd deemed impossible (mojibake, spacing, br, emails).
