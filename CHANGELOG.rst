@@ -3,6 +3,25 @@
 Changelog for jusText
 =====================
 
+4.2.0 (2026-06-25)
+------------------
+Validated on a fresh held-out **test** set across all five domains — no regressions vs 4.1.0;
+general/test **0.8885 → 0.8927** (vs upstream jusText v3.0.2's 0.7729). New recognizable-platform
+and JS-blob handlers, plus comment-attribution and malformed-HTML recovery, all gated and
+self-correcting so well-formed pages are untouched.
+
+- *FEATURE:* JS-rendered content recovered from page data, not the DOM — **CONTENTdm** digital
+  libraries (``__INITIAL_STATE__``), **Ultimate Guitar** reviews (``UGAPP.store``), **Hearst
+  flipbook** slideshows (``FBModel.slides``), and a research/medical **JSON-LD abstract** rescue
+  (appended only when a page under-extracts).
+- *FEATURE:* **vBulletin threaded mode** (posts hidden in the ``pd[]`` preview array) and
+  no-``.postbit`` skins; **Ask MetaFilter**; **AnsPress** no longer misfires the StackExchange path.
+- *FEATURE:* Comment attribution for more WordPress/Blogger themes (``.comment-author``) and
+  Movable Type; duplicate-byline cleanup.
+- *BUG FIX:* Recover content after a **premature** ``</html>`` close (self-correcting re-merge);
+  fix words glued at inline ``<img>`` / block ``<address>`` boundaries; drop dangling UI-label
+  paragraphs.
+
 4.1.0 (2026-06-25)
 ------------------
 LLM-distilled main-content extraction fork (``XenonMolecule/jusText``). Tuned against an

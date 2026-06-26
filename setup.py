@@ -21,7 +21,7 @@ with open("README.rst") as readme:
 
 setup(
     name="jusText",
-    version="4.1.0",
+    version="4.2.0",
     description="Heuristic + learned boilerplate removal (improved jusText fork)",
     long_description=long_description,
     author="Jan Pomikálek",
