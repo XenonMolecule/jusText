@@ -205,3 +205,11 @@ so not a clean lever); `none`/`pass` = legit cells in one fedora test-results ta
 typography (`**bold**`, `  \n` hard-breaks) + email-quote handling — both prior walls.
 Possible future lever: mailing-list quote under-extraction (patchwork gold 84 `>` vs our 22;
 ws-policy 129 vs 83) — but gold inconsistency (trauma.org keeps 0) makes it risky.
+
+## Robustness: NULL bytes / control chars crash the extractor (2026-06-26, queued)
+A doc with NULL bytes or other control characters crashes jusText -- lxml raises
+"All strings must be XML compatible: Unicode or ASCII, no NULL bytes or control characters".
+Should be handled gracefully (strip/sanitize control chars in html_to_dom before parsing, like the
+empty-HTML guard 'Handle empty/unparseable HTML gracefully'), so one bad doc never crashes a batch.
+Fix: in html_to_dom, drop disallowed control chars (keep \t \n \r) from the text before lxml parse;
+catch lxml.etree.ParserError/ValueError and fall back to an empty doc.
