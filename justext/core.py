@@ -468,6 +468,86 @@ def rewrite_code_tables(dom):
     return dom
 
 
+def _clean_cell_text(cell):
+    """Visible text of a table cell: CSS-hidden tooltips (``display:none``) and script/style are
+    dropped so they do not leak into the rendered table (e.g. UniProt stores escaped ``<p>`` help
+    markup in a ``display:none`` span -- text_content() would otherwise slurp it). Non-mutating."""
+    c = copy.deepcopy(cell)
+    for bad in c.xpath(".//*[contains(@style, 'display:none') or contains(@style, 'display: none')]"
+                       " | .//script | .//style"):
+        parent = bad.getparent()
+        if parent is not None:
+            parent.remove(bad)
+    return " ".join(c.text_content().split())
+
+
+def _pipe_row(cells):
+    """Join a row with `` | ``. Only an empty *first* cell needs ``&nbsp;`` (to keep the leading
+    column from collapsing); other empty cells render as a blank cell (research log 0099)."""
+    cells = list(cells)
+    if cells and not cells[0]:
+        cells[0] = "&nbsp;"
+    return " | ".join(cells)
+
+
+def rewrite_data_tables(dom, min_rows=3, max_median_cell=80):
+    """In-place: render a uniform data table the gold would transcribe as markdown, or leave it.
+
+    The gold renders a real data table as ``cell | cell | cell`` rows (one newline between rows),
+    and a label-value table as ``label value`` lines (single newline) -- not space-joined cells in
+    double-spaced paragraphs the way jusText otherwise does (research log 0099). We rewrite to a
+    verbatim ``<pre>`` ONLY when the table type is unambiguous, so layout/nav tables and prose
+    tables are left to the normal path:
+
+    * a ``<th>`` header row -> a pipe table with a ``--- | ---`` separator (empty cells -> ``&nbsp;``
+      so the columns survive). The ``<th>`` header is the clean signal for a genuine data table --
+      gated alone it skips the nav/forum/CONTENTdm tables that have no header (which a broad rule
+      wrongly piped, e.g. a blog's sidebar nav).
+    * otherwise, if every first-row cell ends in ``:`` -> a label-value block (single newline rows,
+      no pipes), e.g. a spec sheet.
+
+    Every row must have the same column count (>= 2), short uniform cells, and not be link-heavy.
+    DSpace ``itemDisplayTable`` is excluded (it has its own label:value handler, research log 0082).
+    """
+    for table in dom.xpath("//table"):
+        if table.xpath(".//table"):                      # outer layout table -> skip
+            continue
+        if "itemDisplayTable" in (table.get("class") or ""):
+            continue
+        rows = table.xpath("./tr | ./tbody/tr | ./thead/tr")
+        cell_rows = [tr.xpath("./td | ./th") for tr in rows]
+        if (len(cell_rows) < min_rows or any(len(c) < 2 for c in cell_rows)
+                or len({len(c) for c in cell_rows}) != 1):
+            continue                                     # too few rows / ragged -> not a clean table
+        grid = [[_clean_cell_text(c) for c in row] for row in cell_rows]
+        link_chars = sum(len(a.text_content()) for a in table.xpath(".//a"))
+        if link_chars > 0.5 * max(1, len(table.text_content())):
+            continue                                     # nav/link table
+        cell_lengths = sorted(len(c) for row in grid for c in row)
+        if cell_lengths[len(cell_lengths) // 2] > max_median_cell:
+            continue                                     # prose rows, not data cells
+        n_cells = sum(len(r) for r in grid)
+        if sum(1 for row in grid for c in row if not c) > 0.4 * n_cells:
+            continue                                     # mostly-empty -> form/layout table
+        width = len(grid[0])
+        if all(c.tag == "th" for c in cell_rows[0]):                     # data table with a header
+            body = [_pipe_row(row) for row in grid]
+            body.insert(1, " | ".join(["---"] * width))
+            text = "\n".join(body)
+        elif all(c.rstrip().endswith(":") for c in grid[0] if c.strip()):   # label-value table
+            text = "\n".join(" ".join(row) for row in grid)
+        else:
+            continue                                     # ambiguous -> leave to the normal path
+        if not text.strip():
+            continue
+        pre = table.makeelement("pre")
+        pre.text = text
+        parent = table.getparent()
+        if parent is not None:
+            parent.replace(table, pre)
+    return dom
+
+
 # super(...).__init__() breaks Python 2.7 - TypeError: super() argument 1 must be type, not classobj
 # noinspection PyMissingConstructor
 class ParagraphMaker(ContentHandler):
@@ -2077,6 +2157,7 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
     dom = preprocessor(dom)
     rewrite_code_tables(dom)
     rewrite_code_blocks(dom)
+    rewrite_data_tables(dom)
 
     paragraphs = ParagraphMaker.make_paragraphs(dom)
 

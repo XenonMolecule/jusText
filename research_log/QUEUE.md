@@ -230,3 +230,17 @@ calendar w/ &nbsp; empty cells, patents, Wikipedia Film table). Open gaps the us
   ("Seed source: …", "Type: Family", "Number in seed: 53") is double-newlined; should be
   single-newlined (the colon→single-newline rule, but this may be a `<dl>`/`<p>` list, NOT a
   `<table>`, so rewrite_data_tables won't see it — extend the colon-collapse to dl/p runs).
+
+## #2 — Narrow ragged DATA-table handling (shipped 0099 reverted broad ragged)
+The uniform-width gate skips ragged tables. Two flavours of ragged table the gold DOES want piped:
+- **Multi-section** (atsdr docid=873 table-2): colspan section-header rows ("Organics"/"Inorganics")
+  split one <table> into sub-tables of different widths. Want: split at 1-cell rows → independent
+  per-section pipe tables (each its own width + `--- | ---`).
+- **Multi-level header** (genomebiology gb-2006-7-6-r47 Table 2): colcounts [2,4,10], th header rows
+  then uniform 10-col td data, 59% numeric. Classifier currently dumps every cell on its own line.
+  NOTE: the gold here is itself wrong (collapsed 9 data cols → 3, mislabeled Clone 5's three
+  order-values as Clone 5/6/18) — so a perfect fix won't fully score; quality call.
+KEY discriminator vs the forums/forms that broad ragged ruined: **numeric/short-cell density + <th>
+header + low link density**. Forums ≈0% numeric, long text cells, many links → still skipped.
+Gate a ragged rewrite on e.g. ≥30% numeric cells AND <th> header AND existing link/length/empty
+gates. Verify on: atsdr, genomebiology (fire) vs psypokes, paia, UniProt-features (skip).
