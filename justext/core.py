@@ -574,6 +574,11 @@ def _render_ragged_table(cell_rows, grid):
             seg.append((row, texts))
     segments.append((seg, None))
 
+    # In a *sectioned* table (one with a standalone 1-cell heading like "ORGANICS"), a sibling section
+    # can instead carry its name in the first cell of its header row ("INORGANICS | Unfiltered | ...").
+    # Pull that out as a heading too, so both sections render the same way (research log 0101).
+    sectioned = any(marker for _, marker in segments)
+
     carried = None                    # header texts carried from a header-only segment
     pending_heading = None
     for seg, marker in segments:
@@ -586,6 +591,11 @@ def _render_ragged_table(cell_rows, grid):
             if not body:                              # header-only segment -> carry forward
                 carried = seg[0][1]
             else:
+                if (sectioned and pending_heading is None and header
+                        and header[0].isupper() and any(c.isalpha() for c in header[0])
+                        and len(header[0]) >= 3):
+                    pending_heading = header[0]       # all-caps section name in the header -> heading
+                    header = [""] + header[1:]
                 width = max([len(t) for t in body] + [len(header) if header else 0])
                 lines = []
                 if header is None:
