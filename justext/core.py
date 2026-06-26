@@ -1396,6 +1396,38 @@ def _flipbook_clean(js_string):
     return _cdm_strip_html(text)
 
 
+_LDJSON = re.compile(
+    r'<script[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script>', re.S | re.I)
+
+
+def _jsonld_abstract(html_text):
+    """The longest JSON-LD ``description``/``abstract`` string (>= 500 chars), or ''.
+
+    A long structured abstract is the recovery path for article/abstract pages whose main content
+    the classifier dropped (e.g. a journal peer-review page that surfaces only the review timeline).
+    The >= 500 floor skips short meta descriptions (research log 0093)."""
+    if not isinstance(html_text, unicode) or "application/ld+json" not in html_text:
+        return ""
+    best = ""
+    for match in _LDJSON.finditer(html_text):
+        try:
+            data = json.loads(match.group(1).strip())
+        except Exception:
+            continue
+        stack = [data]
+        while stack:
+            node = stack.pop()
+            if isinstance(node, dict):
+                for key in ("description", "abstract"):
+                    value = node.get(key)
+                    if isinstance(value, str) and len(value) > len(best):
+                        best = value
+                stack.extend(node.values())
+            elif isinstance(node, list):
+                stack.extend(node)
+    return best if len(best) >= 500 else ""
+
+
 def _hearst_flipbook_slides(html_text):
     """["Title - description"] lines for a Hearst flipbook slideshow, or []."""
     if not isinstance(html_text, unicode) or "slidetype:" not in html_text:
@@ -1898,6 +1930,22 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         missing = [s for s in slides if re.sub(r"\s+", " ", s)[:40] not in kept]
         if len(missing) >= 2:
             paragraphs.extend(_marker_paragraph(s) for s in missing)
+
+    # Research/medical abstract rescue (research log 0093): a page that badly under-extracted
+    # (< 1000 kept chars) but carries a long JSON-LD abstract is usually an article/abstract page
+    # whose main content the classifier dropped (e.g. a journal page showing only the review
+    # timeline). Append the abstract when it isn't already present. Gated on under-extraction so
+    # well-extracted pages -- where the JSON-LD description is just a supplementary blurb the gold
+    # omits -- are untouched (a blanket append regressed those; this does not).
+    if sum(len(p.text) for p in paragraphs if not p.is_boilerplate) < 1000:
+        abstract = _jsonld_abstract(html_text)
+        if abstract:
+            kept = re.sub(r"\s+", " ",
+                          "\n".join(p.text for p in paragraphs if not p.is_boilerplate)).lower()
+            abstract_words = set(re.findall(r"\w+", abstract.lower()))
+            present = len(abstract_words & set(re.findall(r"\w+", kept))) / max(1, len(abstract_words))
+            if abstract_words and present < 0.6:
+                paragraphs.append(_marker_paragraph(abstract))
 
     # DSpace split-cell skins (research log 0082): the metadata table left a bare "Authors"
     # label (its link-dense value dropped). Rebuild the labeled block from the raw table.
