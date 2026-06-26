@@ -1303,6 +1303,46 @@ def metafilter_paragraphs(dom, include_comments=True):
     return paragraphs
 
 
+# Ultimate Guitar review (research log 0090). UG renders the review client-side; the body is HTML
+# inside `window.UGAPP.store.page.data.content`, not the DOM (F1 0.00). Recover and tag-strip it.
+_UGAPP_PAGE = re.compile(r"window\.UGAPP\.store\.page\s*=\s*(\{.*?\});\s*\n", re.S)
+
+
+def ultimateguitar_paragraphs(dom, include_comments=True):
+    """The review body from an Ultimate Guitar page's UGAPP store blob, or None.
+
+    Only review pages carry ``data.content`` (>= 200 chars); tabs/lessons/forum pages don't, so
+    they fall through to normal extraction untouched.
+    """
+    for script in dom.xpath('//script'):
+        source = script.text or ""
+        if "UGAPP.store.page" not in source:
+            continue
+        match = _UGAPP_PAGE.search(source)
+        if not match:
+            return None
+        try:
+            data = json.loads(match.group(1))
+        except Exception:
+            return None
+        content = ((data.get("data") or {}).get("content") or "")
+        if len(content) < 200:
+            return None
+        try:
+            fragment = lxml.html.fromstring("<div>%s</div>" % content)
+        except Exception:
+            return None
+        # Block-aware segmentation (ParagraphMaker drops <script>/<style> and keeps <br>/<p>
+        # structure), so the review reads in paragraphs like the gold, not one flattened wall.
+        bodies = [p for p in ParagraphMaker.make_paragraphs(fragment) if p.text.strip()]
+        if sum(len(p.text) for p in bodies) < 200:
+            return None
+        for body in bodies:
+            body.class_type = "good"
+        return bodies
+    return None
+
+
 # CONTENTdm digital library (research log 0087). CONTENTdm renders the item client-side: the
 # digitized full text lives in `window.__INITIAL_STATE__.item.item.text`, NOT the DOM, so jusText
 # otherwise extracts nothing (F1 0.00). Recover the OCR text for items that carry it.
@@ -1310,13 +1350,20 @@ _CDM_STATE = re.compile(r"window\.__INITIAL_STATE__\s*=\s*JSON\.parse\('(.+?)'\)
 
 
 def _cdm_strip_html(html_str):
-    """Plain text of a CONTENTdm rich-text field (pageText / aboutPageHtml), or ''."""
+    """Plain text of a rich-text JSON field (CONTENTdm pageText, UG review content), or ''.
+
+    Drops ``<script>``/``<style>`` first -- some fields embed page-machinery JS (Ultimate Guitar's
+    ``UGAPP.store`` widget assignments) that ``text_content`` would otherwise leak. This removes
+    only executable script/style, never content code (``<pre>``/``<code>`` are kept)."""
     if not html_str:
         return ""
     try:
-        return " ".join(lxml.html.fromstring("<div>%s</div>" % html_str).text_content().split())
+        fragment = lxml.html.fromstring("<div>%s</div>" % html_str)
     except Exception:
         return ""
+    for machinery in fragment.xpath(".//script | .//style"):
+        machinery.getparent().remove(machinery)
+    return " ".join(fragment.text_content().split())
 
 
 # CONTENTdm OCR text uses a Private-Use-Area glyph (e.g. U+F0C3) as a paragraph-break marker --
@@ -1773,6 +1820,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
             qa_paragraphs = metafilter_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is None:
             qa_paragraphs = contentdm_paragraphs(dom, include_comments=include_comments)
+        if qa_paragraphs is None:
+            qa_paragraphs = ultimateguitar_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is not None:
             if fix_encoding:
                 decode_double_entities(qa_paragraphs)
@@ -1829,7 +1878,45 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
             if kept_alt > kept:
                 return alt
 
+    # Content-in-links rescue (research log 0090): a page whose whole content block is wrapped in
+    # <a> tags (e.g. a course catalogue) is killed by the link-density heuristic, so the normal
+    # path emits ~nothing. ONLY THEN, re-extract with paragraph-length links unwrapped and keep it
+    # if it recovers more content. Gated on near-empty output so working pages -- where unwrapping
+    # would re-admit related/nav link blocks the gold drops -- are never touched (the broad version
+    # regressed dev2; this override does not, because it can't fire on a page that extracted fine).
+    if remerge and sum(len(p.text) for p in paragraphs if not p.is_boilerplate) < 300:
+        unwrapped = _unwrap_long_links(html_text)
+        if unwrapped is not None:
+            alt = justext(unwrapped, stoplist, length_low, length_high, stopwords_low,
+                stopwords_high, max_link_density, max_heading_distance, no_headings,
+                encoding, default_encoding, enc_errors, preprocessor, model, fix_encoding,
+                forum_qa, include_comments, remerge=False)
+            kept = sum(len(p.text) for p in paragraphs if not p.is_boilerplate)
+            if sum(len(p.text) for p in alt if not p.is_boilerplate) > kept:
+                return alt
+
     return paragraphs
+
+
+def _unwrap_long_links(html_text):
+    """A copy of *html_text* with paragraph-length (>= 15-word) ``<a>`` links demoted to spans so
+    their text is no longer counted as link boilerplate, or None if there are none / it won't parse.
+    """
+    if not isinstance(html_text, unicode):
+        return None
+    try:
+        dom = lxml.html.fromstring(html_text)
+    except Exception:
+        return None
+    changed = False
+    for anchor in dom.xpath('//a'):
+        if len(anchor.text_content().split()) >= 15:
+            anchor.tag = "span"
+            anchor.attrib.pop("href", None)
+            changed = True
+    if not changed:
+        return None
+    return lxml.html.tostring(dom, encoding="unicode")
 
 
 _BODY_RE = re.compile(r"<body\b[^>]*>(.*?)</body\s*>", re.S | re.I)
