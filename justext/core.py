@@ -959,6 +959,63 @@ def _forum_thread_paragraphs(dom, posts):
     return paragraphs
 
 
+# vBulletin threaded mode (research log 0094). In ?mode=threaded only the open post is real HTML;
+# every other post's HTML is stashed in a JS preview-data array ``pd[postid] = '...escaped html...'``
+# (rendered on click), so jusText sees just the one post. The bodies are in the raw page -- parse
+# the pd[] entries directly (Playwright wouldn't help: the previews load on click, not on render).
+_VB_PD = re.compile(r"pd\[(\d+)\]\s*=\s*'(.*?)';", re.S)
+
+
+def _vb_deescape(js_string):
+    """Undo the JS string-literal escaping vBulletin uses to embed post HTML in a script."""
+    return (js_string.replace("' + '", "").replace("\\r\\n", "\n").replace("\\t", "\t")
+            .replace("\\/", "/").replace('\\"', '"').replace("\\'", "'"))
+
+
+def vbulletin_threaded_paragraphs(dom, include_comments=True):
+    """Role-prefixed paragraphs for a vBulletin *threaded*-mode thread, or None.
+
+    Recovers every post from the ``pd[postid]`` preview-data array (the open post is also a real
+    DOM post, so it appears once). Each entry carries the post's own author link + body, so the
+    author/body association is correct; the bbcode quote block is stripped (research log 0094)."""
+    script_text = "\n".join(s.text for s in dom.xpath('//script') if s.text and "pd[" in s.text)
+    entries = _VB_PD.findall(script_text)
+    if len(entries) < 3:
+        return None
+    paragraphs = []
+    title = dom.xpath('//h1//text()') or dom.xpath('//title//text()')
+    if title and title[0].strip():
+        paragraphs.append(_marker_paragraph(re.split(r"\s+-\s+", title[0].strip())[0]))
+    seen = set()
+    for post_id, value in entries:
+        if post_id in seen:
+            continue
+        seen.add(post_id)
+        try:
+            fragment = lxml.html.fromstring("<div>%s</div>" % _vb_deescape(value))
+        except Exception:
+            continue
+        bodies = fragment.xpath('.//*[starts-with(@id, "post_message")]')
+        if not bodies:
+            continue
+        body_el = copy.deepcopy(bodies[0])
+        for quote in body_el.xpath(
+                './/div[div[contains(@class, "smallfont") and contains(., "Quote")]]'):
+            if quote.getparent() is not None:
+                quote.getparent().remove(quote)
+        body = " ".join(body_el.text_content().split())
+        if not body:
+            continue
+        username = ""
+        for anchor in fragment.xpath('.//a[contains(@href, "member.php")]'):
+            text = " ".join(anchor.text_content().split()).strip().strip("()")
+            if text and text.lower() != "view public profile":
+                username = text
+                break
+        paragraphs.append(_marker_paragraph("%s: %s" % (username, body) if username else body))
+    return paragraphs if len(paragraphs) >= 3 else None
+
+
 def vbulletin_paragraphs(dom, include_comments=True):
     """Role-prefixed paragraphs for a vBulletin forum thread, or None if not one.
 
@@ -1873,6 +1930,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         qa_paragraphs = stackexchange_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is None:
             qa_paragraphs = vbulletin_paragraphs(dom, include_comments=include_comments)
+        if qa_paragraphs is None:
+            qa_paragraphs = vbulletin_threaded_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is None:
             qa_paragraphs = phpbb_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is None:
