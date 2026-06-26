@@ -1919,6 +1919,7 @@ def prepend_comment_authors(paragraphs, meta):
         return
     used = set()
     inserts = []
+    matched = []
     for idx, p in enumerate(paragraphs):
         if p.is_boilerplate:
             continue
@@ -1932,6 +1933,18 @@ def prepend_comment_authors(paragraphs, meta):
                 marker = "*%s* (%s):" % (author, date) if date else "*%s*:" % author
                 inserts.append((idx, _marker_paragraph(marker)))
                 used.add(i)
+                matched.append((author, date))
+                break
+    # Some themes keep the raw `.comment-meta` byline ("Author <date>") as its own paragraph; with
+    # the injected marker that's a duplicate byline. Drop the raw one (research log 0096).
+    for p in paragraphs:
+        if p.is_boilerplate:
+            continue
+        text = re.sub(r"\s+", " ", p.text).strip()
+        for author, date in matched:
+            if (author and date and author in text and date in text
+                    and len(text) <= len(author) + len(date) + 15):
+                p.class_type = "bad"
                 break
     if inserts:
         # The gold opens the kept comment section with a "**Comments**" heading (100% of
