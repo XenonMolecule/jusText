@@ -30,17 +30,28 @@ is gold-limited (see [[gold-underextracts]]).
 ## Fix
 
 `contentdm_paragraphs`: parse the `__INITIAL_STATE__` JS-escaped JSON
-(`.encode().decode("unicode_escape")` then `json.loads`), and emit `item.item.text` — gated on the
-CONTENTdm `collectionAlias` key AND text ≥ 400 chars. That gate fires on exactly the 2 item-OCR
-docs and on NONE of the other 203 dev3 `__INITIAL_STATE__` SPAs or the 2 empty-text CONTENTdm items
-(they fall through to normal extraction). Placed last in the forum_qa chain.
+(`.encode().decode("unicode_escape")` then `json.loads`), gated on the CONTENTdm `collectionAlias`
+key (so the other 203 dev3 `__INITIAL_STATE__` SPAs are untouched — verified 0 fires on dev2/dev
+too). Three branches by page type:
+
+1. **OCR item** (`item.text` ≥ 400): emit the text. westlake, uidaho.
+2. **Photo / metadata item** (short `item.text`): title + caption + `collection.pageText`
+   (HTML-stripped). digitalhorizons.
+3. **Collection landing** (empty `item.text`): `collection.messages.SITE_CONFIG_aboutPageHtml`
+   (HTML-stripped). augie.
+
+**PUA cleanup:** CONTENTdm OCR uses a Private-Use-Area glyph (U+F0C3) as a paragraph-break marker;
+the gold renders it as a blank line. `_cdm_clean_text` converts the PUA range → `\n\n` and drops
+control chars — fixing both the "weird characters" and the "broken newlines" the user flagged on
+westlake (one root cause).
 
 ## Results
 
-westlake 0.00→0.99, uidaho 0.00→0.19 (correct content, gold-capped). dev3 0.8821→0.8827 (+0.0006 F1, Lev +0.0005).
-dev2/dev flat (CONTENTdm is dev3-only; gate can't fire elsewhere). 61 tests pass.
+| doc | base | handler |
+|---|--:|--:|
+| westlakelibrary (OCR) | 0.00 | **0.995** |
+| digitalhorizons (photo) | 0.00 | **0.979** |
+| augie (collection) | 0.00 | **0.968** |
+| uidaho (OCR, gold-truncated) | 0.00 | 0.191 |
 
-## Next
-
-- augie (`collection.pageText`) and digitalhorizons (Title + caption) need extra branches — low
-  ROI (2 dev3-only docs, different formats). Deferred.
+dev3 0.8821 → **0.8837** (+0.0016 F1, Lev +0.0015). dev2/dev flat. 61 tests pass.

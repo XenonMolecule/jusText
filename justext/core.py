@@ -1298,12 +1298,39 @@ def metafilter_paragraphs(dom, include_comments=True):
 _CDM_STATE = re.compile(r"window\.__INITIAL_STATE__\s*=\s*JSON\.parse\('(.+?)'\);", re.S)
 
 
-def contentdm_paragraphs(dom, include_comments=True):
-    """The OCR/full text of a CONTENTdm item from its __INITIAL_STATE__ blob, or None.
+def _cdm_strip_html(html_str):
+    """Plain text of a CONTENTdm rich-text field (pageText / aboutPageHtml), or ''."""
+    if not html_str:
+        return ""
+    try:
+        return " ".join(lxml.html.fromstring("<div>%s</div>" % html_str).text_content().split())
+    except Exception:
+        return ""
 
-    Fires only for an item with the CONTENTdm `collectionAlias` key and substantial text, so the
-    203-doc field of other `__INITIAL_STATE__` SPAs -- and CONTENTdm image/metadata-only items
-    whose text field is empty -- fall through to normal extraction untouched.
+
+# CONTENTdm OCR text uses a Private-Use-Area glyph (e.g. U+F0C3) as a paragraph-break marker --
+# the gold renders it as a blank line. Convert PUA chars to a paragraph break and drop stray
+# control chars, then collapse runs (research log 0087).
+_CDM_PUA = re.compile("[\ue000-\uf8ff]+\\s*")
+_CDM_CTRL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def _cdm_clean_text(text):
+    text = _CDM_PUA.sub("\n\n", text)
+    text = _CDM_CTRL.sub("", text)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
+def contentdm_paragraphs(dom, include_comments=True):
+    """Content of a CONTENTdm item/collection page from its __INITIAL_STATE__ blob, or None.
+
+    CONTENTdm renders client-side; the content lives in the JSON, not the DOM, and which field
+    holds it depends on the page type (research log 0087):
+      - OCR full text (`item.text`, >= 400 chars) -> emit it (digitized newspapers/books);
+      - a photo / metadata item (short `item.text`) -> title + caption + collection blurb;
+      - a collection landing (empty `item.text`) -> the collection About page.
+    Gated on the CONTENTdm `collectionAlias` key, so the other `__INITIAL_STATE__` SPAs are
+    untouched. Returns None if nothing substantial is found (falls through to normal extraction).
     """
     for script in dom.xpath('//script'):
         source = script.text or ""
@@ -1319,10 +1346,19 @@ def contentdm_paragraphs(dom, include_comments=True):
         item = (data.get("item") or {}).get("item") or {}
         if "collectionAlias" not in item:
             return None
-        text = (item.get("text") or "").strip()
-        if len(text) < 400:
-            return None
-        return [_marker_paragraph(text)]
+        collection = data.get("collection") or {}
+        text = _cdm_clean_text(item.get("text") or "")
+        if len(text) >= 400:                                       # digitized OCR item
+            return [_marker_paragraph(text)]
+        page_text = _cdm_strip_html(collection.get("pageText"))
+        if text:                                                   # photo / metadata item
+            parts = [p for p in [(item.get("title") or "").strip(), text, page_text] if p]
+            if sum(len(p) for p in parts) >= 400:
+                return [_marker_paragraph(p) for p in parts]
+        about = _cdm_strip_html((collection.get("messages") or {}).get("SITE_CONFIG_aboutPageHtml"))
+        if len(about) >= 400:                                      # collection landing page
+            return [_marker_paragraph(about)]
+        return None
     return None
 
 
