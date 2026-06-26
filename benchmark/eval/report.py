@@ -66,9 +66,11 @@ def main():
     ap.add_argument("--dataset", default="general")
     ap.add_argument("--split", default="dev")
     ap.add_argument("--out", default=None)
+    ap.add_argument("--allow-test", action="store_true",
+                    help="view a held-out test run that has already been recorded")
     args = ap.parse_args()
 
-    run = load_run(args.tag, args.split, args.dataset)
+    run = load_run(args.tag, args.split, args.dataset, allow_test=args.allow_test)
     docs = []
     for i, d in enumerate(run.docs):
         cat = classify(d)
