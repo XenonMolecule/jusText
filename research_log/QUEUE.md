@@ -179,7 +179,11 @@ Hypothesis: the 203 dev3 `__INITIAL_STATE__`/state-blob docs are a systematic re
 - **JSON-LD `articleBody`**: only 17 dev3 docs have it (≥200 chars); 16 already score F1≥0.6 (a site
   emitting articleBody almost always renders the DOM too, so it's redundant). Exactly 1 doc would
   improve (dogtrickacademy forum 0.37→0.65, and it's mediocre). Building it risks regressing the 16
-  good docs. NOT WORTH IT.
+  good docs. NOT WORTH IT. **Containment-gated refinement** (use articleBody only when its tokens
+  are <60% present in the DOM extraction — self-correcting like remerge): fires on 0/17 docs,
+  +0.0000. Reason: all 17 already have the article in the DOM (containment high); dogtrickacademy's
+  DOM has the article too, just buried in over-extraction (an OVER-extraction/precision issue, not
+  under-extraction). articleBody is definitively closed as an under-extraction lever.
 - **Long-link unwrap** (content-in-`<a>`, hqnetwork): recovers hqnetwork 0.00→0.79-1.00 but
   regresses dev2 −0.0047 to −0.0061 at every word threshold (re-admits related/nav/directory link
   blocks the gold drops). Net-negative recall lever, same wall as the 0079 threshold/heuristic
