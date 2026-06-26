@@ -213,3 +213,20 @@ Should be handled gracefully (strip/sanitize control chars in html_to_dom before
 empty-HTML guard 'Handle empty/unparseable HTML gracefully'), so one bad doc never crashes a batch.
 Fix: in html_to_dom, drop disallowed control chars (keep \t \n \r) from the text before lxml parse;
 catch lxml.etree.ParserError/ValueError and fall back to an empty doc.
+
+## Table rendering follow-ups (2026-06-26, user-flagged during th-gate work)
+The `<th>`-gated pipe rewrite (rewrite_data_tables) handles clean uniform header tables (TSA,
+calendar w/ &nbsp; empty cells, patents, Wikipedia Film table). Open gaps the user flagged:
+- **Ragged tables skipped wholesale** — Wikipedia *Rebecca Balding* has two filmography tables; the
+  Film table pipes, the **Television table does NOT** (one row has a different column count from
+  colspan/rowspan, so `len(widths)!=1` kills the whole table). Need to tolerate a ragged row
+  (pad/normalize columns) instead of skipping. Also that doc shows a **title-duplication** artifact
+  ("Boogens, TheThe Boogens" = sort-key span + display title concatenated) and **truncation**.
+- **atsdr.cdc.gov/HAC/pha/pha.asp?docid=873&pg=2** — contaminant data tables get **mangled/truncated**:
+  the classifier splits cells into separate paragraphs and DROPS values (gold has clean
+  `| Contaminant | Max Conc | Comparison | Source |`). th-gate didn't fire (likely ragged or cell
+  >80 chars) AND the row-dropping (0051 should keep all rows) failed. High-value: real data lost.
+- **pfam.janelia.org/family/PF14029** — a label-value block where every line ends in `:`
+  ("Seed source: …", "Type: Family", "Number in seed: 53") is double-newlined; should be
+  single-newlined (the colon→single-newline rule, but this may be a `<dl>`/`<p>` list, NOT a
+  `<table>`, so rewrite_data_tables won't see it — extend the colon-collapse to dl/p runs).
