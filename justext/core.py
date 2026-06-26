@@ -1823,28 +1823,36 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
 
 _BODY_RE = re.compile(r"<body\b[^>]*>(.*?)</body\s*>", re.S | re.I)
 _HTML_END_RE = re.compile(r"</html\s*>", re.I)
+# An empty document that closes early -- "<body></body></html>" -- immediately followed by more
+# markup. lxml stops at that close and drops everything after it (research log 0088).
+_PREMATURE_CLOSE = re.compile(r"</body>\s*</html>\s*(?=<)", re.I)
 
 
 def _merge_html_documents(html_text):
-    """Glue the <body> contents of a multi-`<html>` page into one document, or None.
+    """An alternative single-document parse for malformed multi-/early-close HTML, or None.
 
-    WARC captures sometimes concatenate several documents (a redirect stub + the real page);
-    this returns ``<html><body>...all bodies...</body></html>`` so a single parse sees every
-    body. Returns None unless the input is text with >= 2 ``</html>`` and >= 1 ``<body>``.
+    Two WARC malformations both make lxml stop early and drop real content; the self-correcting
+    caller re-extracts from the result and keeps whichever is larger, so neither can regress a
+    page lxml already handled:
 
-    The >= 1 body case matters when a stub document has a malformed/unclosed ``<body>`` (so only
-    the *real* document's body matches the pair regex) but its content sits after the first
-    ``</html>``, where lxml stops -- e.g. cams.com. Merging the matched body recovers it; the
-    self-correcting caller keeps the larger extraction, so a body lxml already parsed is a no-op.
+    - **Concatenated documents** (research log 0076/0081): >= 2 ``</html>`` -- a redirect stub plus
+      the real page. Glue every ``<body>`` into one ``<html><body>...</body></html>`` so a single
+      parse sees them all (the >= 1 body case recovers a stub with a malformed ``<body>`` whose
+      real content sits past the first ``</html>`` -- e.g. cams.com).
+    - **Premature close** (research log 0088): an *empty* ``<body></body></html>`` closes early and
+      the real article follows as loose markup -- e.g. thursdayreview. Drop that premature close so
+      lxml keeps the trailing content.
     """
     if not isinstance(html_text, unicode):
         return None
-    if len(_HTML_END_RE.findall(html_text)) < 2:
-        return None
-    bodies = _BODY_RE.findall(html_text)
-    if len(bodies) < 1:
-        return None
-    return "<html><body>" + "".join(bodies) + "</body></html>"
+    if len(_HTML_END_RE.findall(html_text)) >= 2:
+        bodies = _BODY_RE.findall(html_text)
+        if bodies:
+            return "<html><body>" + "".join(bodies) + "</body></html>"
+    stripped = _PREMATURE_CLOSE.sub("", html_text, count=1)
+    if stripped != html_text:
+        return stripped
+    return None
 
 
 _SCRIPT_RE = re.compile(r"<script\b[^>]*>(.*?)</script>", re.S | re.I)
