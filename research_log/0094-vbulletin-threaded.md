@@ -40,3 +40,18 @@ dev 0.8917→0.8927, dev3 0.8865→0.8866, dev2 0.8804 flat. 61 tests pass. Fire
 *wakeworld is capped by its gold: the thread has ~23 posts but the gold kept only ~7. We now
 recover ALL posts with correct attribution -- the content is NOT missing; the metric is the gold's
 subsetting (see [[gold-underextracts]]). Other threaded forums (no such subsetting) reach 0.76-0.95.
+
+## Follow-ups (same cycle, user-flagged)
+
+- **OP username (threaded):** the thread-starter has no member link in its `pd[]` entry, so its
+  posts were unattributed. Use the post's own `postmenu_<id>` span (present for every post, incl.
+  the OP) for the display name, with the member link as fallback. brian1000's posts now attributed.
+- **Lost reply after a quote (threaded):** removing the bbcode quote `<div>` also dropped its TAIL
+  text -- which is the actual reply (bhyatt_ohp "What about resurrecting a post from 2006?" vanished).
+  `_drop_keep_tail` reattaches the tail before removing the node.
+- **Linear no-`.postbit` skins:** the same wakeworld skin in `mode=linear` (and zonealarm, ...) has
+  real `post_message` divs but no `.postbit`, so the main vBulletin handler missed it -> author
+  after the body + login handle instead of display name. `vbulletin_postmessage_paragraphs` anchors
+  on `post_message` divs, reads the author from the header anchor (`<strong>`-display name, else
+  `(handle)`) + date, and emits author-to-front via the shared assembler.
+  **wakeworld linear 0.929->0.995**, zonealarm flat. dev 0.8927, dev2 0.8804 (flat), dev3 ->0.8867.

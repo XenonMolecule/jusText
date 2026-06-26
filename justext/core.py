@@ -972,6 +972,67 @@ def _vb_deescape(js_string):
             .replace("\\/", "/").replace('\\"', '"').replace("\\'", "'"))
 
 
+def _drop_keep_tail(element):
+    """Remove *element* but keep its tail text -- lxml drops the tail with the node otherwise, which
+    would delete a reply written right after a quote block (research log 0094)."""
+    parent = element.getparent()
+    if parent is None:
+        return
+    if element.tail:
+        previous = element.getprevious()
+        if previous is not None:
+            previous.tail = (previous.tail or "") + element.tail
+        else:
+            parent.text = (parent.text or "") + element.tail
+    parent.remove(element)
+
+
+# vBulletin date in a post header, e.g. "04-23-2013, 1:54 PM" (research log 0094).
+_VB_POSTDATE = re.compile(r"\d{1,2}-\d{1,2}-\d{4},?\s+\d{1,2}:\d{2}\s*[AP]M", re.I)
+
+
+def _vb_post_author(post_message):
+    """Display name (``<strong>``) else login handle (``(name)``) for a post_message div, + date.
+
+    Some vBulletin skins drop the ``.postbit`` wrapper the main handler keys on; the author still
+    sits in a member/relink anchor in the post's header (research log 0094)."""
+    container = post_message
+    for _ in range(10):
+        container = container.getparent()
+        if container is None:
+            return None, ""
+        links = container.xpath(
+            './/a[contains(@class, "relink") or contains(@href, "member.php")]')
+        if not links:
+            continue
+        strong = links[0].xpath('.//strong//text()')
+        handle = re.search(r"\(([^)]+)\)", links[0].text_content())
+        author = (strong[0].strip() if strong and strong[0].strip()
+                  else (handle.group(1).strip() if handle else ""))
+        if not author:
+            continue
+        match = _VB_POSTDATE.search(" ".join(container.text_content().split()))
+        return author, (match.group(0) if match else "")
+    return None, ""
+
+
+def vbulletin_postmessage_paragraphs(dom, include_comments=True):
+    """vBulletin thread via ``post_message`` divs, for skins without ``.postbit``, or None."""
+    messages = dom.xpath('//*[starts-with(@id, "post_message")]')
+    if len(messages) < 2:
+        return None
+    posts = []
+    for message in messages:
+        author, date = _vb_post_author(message)
+        if not author:
+            continue
+        body_paras = [p for p in ParagraphMaker.make_paragraphs(_strip_quote_blocks(message))
+                      if p.text.strip()]
+        if body_paras:
+            posts.append((author, date, body_paras))
+    return _forum_thread_paragraphs(dom, posts)
+
+
 def vbulletin_threaded_paragraphs(dom, include_comments=True):
     """Role-prefixed paragraphs for a vBulletin *threaded*-mode thread, or None.
 
@@ -995,23 +1056,32 @@ def vbulletin_threaded_paragraphs(dom, include_comments=True):
             fragment = lxml.html.fromstring("<div>%s</div>" % _vb_deescape(value))
         except Exception:
             continue
+        for machinery in fragment.xpath('.//script | .//style'):
+            machinery.getparent().remove(machinery)
         bodies = fragment.xpath('.//*[starts-with(@id, "post_message")]')
         if not bodies:
             continue
         body_el = copy.deepcopy(bodies[0])
         for quote in body_el.xpath(
                 './/div[div[contains(@class, "smallfont") and contains(., "Quote")]]'):
-            if quote.getparent() is not None:
-                quote.getparent().remove(quote)
+            parent = quote.getparent()
+            if parent is not None:
+                _drop_keep_tail(quote)  # the reply text is the quote's tail -- keep it
         body = " ".join(body_el.text_content().split())
         if not body:
             continue
+        # The post's own ``postmenu_<id>`` span carries the display name for every post (incl. the
+        # thread starter, who has no member link in the preview); fall back to the member link.
         username = ""
-        for anchor in fragment.xpath('.//a[contains(@href, "member.php")]'):
-            text = " ".join(anchor.text_content().split()).strip().strip("()")
-            if text and text.lower() != "view public profile":
-                username = text
-                break
+        menus = fragment.xpath('.//*[starts-with(@id, "postmenu_")]')
+        if menus:
+            username = " ".join(menus[0].text_content().split()).strip().strip("()").strip()
+        if not username:
+            for anchor in fragment.xpath('.//a[contains(@href, "member.php")]'):
+                text = " ".join(anchor.text_content().split()).strip().strip("()")
+                if text and text.lower() != "view public profile":
+                    username = text
+                    break
         paragraphs.append(_marker_paragraph("%s: %s" % (username, body) if username else body))
     return paragraphs if len(paragraphs) >= 3 else None
 
@@ -1932,6 +2002,8 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
             qa_paragraphs = vbulletin_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is None:
             qa_paragraphs = vbulletin_threaded_paragraphs(dom, include_comments=include_comments)
+        if qa_paragraphs is None:
+            qa_paragraphs = vbulletin_postmessage_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is None:
             qa_paragraphs = phpbb_paragraphs(dom, include_comments=include_comments)
         if qa_paragraphs is None:
