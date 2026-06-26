@@ -21,10 +21,14 @@ cells** (drops form/layout boxes). Then:
 Two rendering rules from user review:
 * **First-cell-only ``&nbsp;``** (``_pipe_row``): only an empty *leading* cell needs ``&nbsp;`` to
   keep the column from collapsing; other empty cells render blank (calendar: ``&nbsp; |  |  | 1``).
-* **``_clean_cell_text``** drops ``display:none`` / ``<script>`` / ``<style>`` *inside cells* before
-  reading text — UniProt stores escaped ``<p>`` help markup in a ``display:none`` tooltip span on
-  each cell; text_content() otherwise slurped literal ``<p>…`` into the table. Tail-preserving via
-  deep-copy (keeps the visible "Active site" that is the hidden span's tail).
+* **``display:none`` strip inside data tables** (in ``preprocessor``, scoped to ``table[.//th]``) —
+  UniProt stores escaped ``<p>`` help markup in a ``display:none`` tooltip span on each feature-table
+  cell; text_content() otherwise slurped literal ``<p>…`` into the rendered table. Must run *before*
+  Cleaner (``style=True``) strips the ``style=`` attribute -- a cell-local strip inside
+  ``rewrite_data_tables`` is a no-op post-Cleaner (the bug shipped in the first 0099 commit). Scoped
+  to ``[.//th]`` (data tables we pipe), NOT all ``//table``: stripping hidden content from *layout*
+  tables removes text the raw-HTML gold keeps (−0.0004 dev3 for all-tables, −0.0056 for global).
+  Tail-preserving via ``_drop_keep_tail`` (keeps the visible "Active site" that is the span's tail).
 
 ## Results
 dev2 0.8804→**0.8802** (−0.0002), dev3 0.8867→**0.8867** (flat). Quality wins at ~flat metric

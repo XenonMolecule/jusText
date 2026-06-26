@@ -368,6 +368,18 @@ def decode_html(html, default_encoding=DEFAULT_ENCODING, encoding=None, errors=D
 
 def preprocessor(dom):
     "Removes unwanted parts of DOM."
+    # Drop CSS-hidden (`display:none`) content inside *data* tables (those with a <th>, i.e. the ones
+    # rewrite_data_tables will pipe) before Cleaner strips `style=` attrs -- otherwise hidden tooltips
+    # leak into the rendered table (UniProt stores escaped `<p>` help markup in a display:none span on
+    # every feature-table cell). Scoped to `table[.//th]`, NOT all tables: a global or all-//table
+    # strip removes hidden content the raw-HTML gold keeps inside layout tables (-0.0056 dev2 global,
+    # -0.0004 dev3 all-tables; log 0099). Tail-preserving (keeps the cell text that is the hidden
+    # span's tail); never code.
+    for el in dom.xpath("//table[.//th]//*[contains(@style, 'display:none')"
+                        " or contains(@style, 'display: none')]"):
+        if el.tag in ("pre", "code") or el.xpath(".//pre | .//code"):
+            continue
+        _drop_keep_tail(el)
     options = {
         "processing_instructions": False,
         "remove_unknown_tags": False,
@@ -468,17 +480,9 @@ def rewrite_code_tables(dom):
     return dom
 
 
-def _clean_cell_text(cell):
-    """Visible text of a table cell: CSS-hidden tooltips (``display:none``) and script/style are
-    dropped so they do not leak into the rendered table (e.g. UniProt stores escaped ``<p>`` help
-    markup in a ``display:none`` span -- text_content() would otherwise slurp it). Non-mutating."""
-    c = copy.deepcopy(cell)
-    for bad in c.xpath(".//*[contains(@style, 'display:none') or contains(@style, 'display: none')]"
-                       " | .//script | .//style"):
-        parent = bad.getparent()
-        if parent is not None:
-            parent.remove(bad)
-    return " ".join(c.text_content().split())
+def _cell_text(cell):
+    "Normalized visible text of a table cell. (display:none tooltips are stripped in preprocessor.)"
+    return " ".join(cell.text_content().split())
 
 
 def _pipe_row(cells):
@@ -519,7 +523,7 @@ def rewrite_data_tables(dom, min_rows=3, max_median_cell=80):
         if (len(cell_rows) < min_rows or any(len(c) < 2 for c in cell_rows)
                 or len({len(c) for c in cell_rows}) != 1):
             continue                                     # too few rows / ragged -> not a clean table
-        grid = [[_clean_cell_text(c) for c in row] for row in cell_rows]
+        grid = [[_cell_text(c) for c in row] for row in cell_rows]
         link_chars = sum(len(a.text_content()) for a in table.xpath(".//a"))
         if link_chars > 0.5 * max(1, len(table.text_content())):
             continue                                     # nav/link table
