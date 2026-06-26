@@ -1379,6 +1379,43 @@ def _cdm_clean_text(text):
     return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
+# Hearst "flipbook" slideshow (research log 0092). Country Living / Good Housekeeping / etc. render
+# a photo-tip gallery from a JS ``FBModel = { slides: [{title, description, ...}] }`` array, NOT the
+# DOM -- so the per-slide tips are dropped. Recover them as "Title - description" lines.
+_FLIPBOOK_SLIDE = re.compile(r'\{[^{}]*?\bslidetype:\s*"[^"]*"[^{}]*?\}', re.S)
+_FB_TITLE = re.compile(r'\btitle:\s*"((?:[^"\\]|\\.)*)"')
+_FB_DESC = re.compile(r'\bdescription:\s*"((?:[^"\\]|\\.)*)"')
+
+
+def _flipbook_clean(js_string):
+    """Unescape a JS string literal and strip its HTML, or '' on failure."""
+    try:
+        text = json.loads('"%s"' % js_string)
+    except Exception:
+        return ""
+    return _cdm_strip_html(text)
+
+
+def _hearst_flipbook_slides(html_text):
+    """["Title - description"] lines for a Hearst flipbook slideshow, or []."""
+    if not isinstance(html_text, unicode) or "slidetype:" not in html_text:
+        return []
+    lines = []
+    for slide in _FLIPBOOK_SLIDE.findall(html_text):
+        title = _FB_TITLE.search(slide)
+        if not title:
+            continue
+        line = _flipbook_clean(title.group(1))
+        desc = _FB_DESC.search(slide)
+        if desc and desc.group(1).strip():
+            cleaned = _flipbook_clean(desc.group(1))
+            if cleaned:
+                line = "%s – %s" % (line, cleaned) if line else cleaned
+        if line.strip():
+            lines.append(line.strip())
+    return lines
+
+
 def contentdm_paragraphs(dom, include_comments=True):
     """Content of a CONTENTdm item/collection page from its __INITIAL_STATE__ blob, or None.
 
@@ -1851,6 +1888,16 @@ def justext(html_text, stoplist, length_low=LENGTH_LOW_DEFAULT,
         decode_double_entities(paragraphs)
         repair_replacement_chars(paragraphs)
         clean_wiki_markup(paragraphs)
+
+    # Hearst flipbook slideshow (research log 0092): the per-photo tips live in a JS slide array,
+    # not the DOM, so the gallery body was dropped. Append the slides the normal extraction missed
+    # (keeps the article intro it already has). Self-limited: only fires when >=2 slides are absent.
+    slides = _hearst_flipbook_slides(html_text)
+    if len(slides) >= 2:
+        kept = re.sub(r"\s+", " ", "\n".join(p.text for p in paragraphs if not p.is_boilerplate))
+        missing = [s for s in slides if re.sub(r"\s+", " ", s)[:40] not in kept]
+        if len(missing) >= 2:
+            paragraphs.extend(_marker_paragraph(s) for s in missing)
 
     # DSpace split-cell skins (research log 0082): the metadata table left a bare "Authors"
     # label (its link-dense value dropped). Rebuild the labeled block from the raw table.
