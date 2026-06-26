@@ -368,6 +368,18 @@ def decode_html(html, default_encoding=DEFAULT_ENCODING, encoding=None, errors=D
 
 def preprocessor(dom):
     "Removes unwanted parts of DOM."
+    # Drop the hidden *content* of tooltip / hover-help widgets anywhere on the page: UI boilerplate
+    # the gold excludes, often holding escaped HTML (UniProt stores `&lt;p&gt;...` help markup in a
+    # display:none `toolTipContent` span on every section heading -- it would otherwise surface as a
+    # literal `<p>`). Gated on BOTH a tooltip class AND display:none so it hits only the hidden payload
+    # span, never the visible wrapper (whose inner text is the real label, e.g. "Active site"), and
+    # not the layout-table content a broad display:none strip removed (-0.0056 dev2, log 0099/0101).
+    for el in dom.xpath("//*[contains(translate(@class,"
+                        "'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'tooltip')"
+                        " and (contains(@style, 'display:none') or contains(@style, 'display: none'))]"):
+        if el.tag in ("pre", "code") or el.xpath(".//pre | .//code"):
+            continue
+        _drop_keep_tail(el)
     # Drop CSS-hidden (`display:none`) content inside *data* tables (those with a <th>, i.e. the ones
     # rewrite_data_tables will pipe) before Cleaner strips `style=` attrs -- otherwise hidden tooltips
     # leak into the rendered table (UniProt stores escaped `<p>` help markup in a display:none span on
@@ -480,17 +492,27 @@ def rewrite_code_tables(dom):
     return dom
 
 
+_DASH_RUN = re.compile(r"^[\s\-‐-―_]+$")
+
+
 def _cell_text(cell):
     "Normalized visible text of a table cell. (display:none tooltips are stripped in preprocessor.)"
-    return " ".join(cell.text_content().split())
+    text = " ".join(cell.text_content().split())
+    if text and _DASH_RUN.match(text):     # a "no data" dash/underscore run -> single en-dash (gold)
+        return "–"
+    return text
 
 
 def _pipe_row(cells):
-    """Join a row with `` | ``. Only an empty *first* cell needs ``&nbsp;`` (to keep the leading
-    column from collapsing); other empty cells render as a blank cell (research log 0099)."""
+    """Join a row with `` | ``. An empty *first* or *last* cell becomes ``&nbsp;`` -- a leading empty
+    cell collapses the column, and GFM silently drops a trailing empty cell (which would make a padded
+    row one column short of its siblings and break the whole table). Interior empties stay blank
+    (research log 0099/0101)."""
     cells = list(cells)
     if cells and not cells[0]:
         cells[0] = "&nbsp;"
+    if cells and not cells[-1]:
+        cells[-1] = "&nbsp;"
     return " | ".join(cells)
 
 
@@ -527,6 +549,56 @@ def _is_calendar(grid):
         if 5 <= modal_w <= 8 and day_frac >= 0.7:
             return True
     return False
+
+
+def _is_header_row(row_cells, is_first):
+    "A header row: all <th>, or (the block's first row and at least half <th>)."
+    ths = sum(1 for c in row_cells if c.tag == "th")
+    return ths == len(row_cells) or (is_first and ths * 2 >= len(row_cells))
+
+
+def _render_ragged_table(cell_rows, grid):
+    """Render a ragged data table (multi-section / multi-level header) as *valid* GFM. Split at 1-cell
+    colspan rows into per-section sub-tables (blank-line separated, bold section headings), so a bare
+    section label never breaks the table (research log 0101). A header-only leading group (e.g. the
+    atsdr "Contaminant | ... " row that sits above the ORGANICS label) is carried onto the next
+    section as its header. Each sub-table gets one header row + ``--- | ---`` delimiter; every row is
+    padded to the section width with _pipe_row (trailing &nbsp; so GFM keeps the column count)."""
+    blocks = []
+    segments, seg = [], []            # split rows at 1-cell markers; remember each marker's label
+    for row, texts in zip(cell_rows, grid):
+        if len(row) < 2:
+            segments.append((seg, texts[0] if texts and texts[0] else None))
+            seg = []
+        else:
+            seg.append((row, texts))
+    segments.append((seg, None))
+
+    carried = None                    # header texts carried from a header-only segment
+    pending_heading = None
+    for seg, marker in segments:
+        if seg:
+            header = carried
+            carried = None
+            body = [t for _, t in seg]
+            if header is None and _is_header_row(seg[0][0], True):
+                header, body = seg[0][1], body[1:]
+            if not body:                              # header-only segment -> carry forward
+                carried = seg[0][1]
+            else:
+                width = max([len(t) for t in body] + [len(header) if header else 0])
+                lines = []
+                if header is None:
+                    header = [""] * width
+                lines.append(_pipe_row(header + [""] * (width - len(header))))
+                lines.append(" | ".join(["---"] * width))
+                lines += [_pipe_row(t + [""] * (width - len(t))) for t in body]
+                table = "\n".join(lines)
+                blocks.append("**%s**\n\n%s" % (pending_heading, table) if pending_heading else table)
+                pending_heading = None
+        if marker:
+            pending_heading = marker
+    return "\n\n".join(b for b in blocks if b.strip())
 
 
 def rewrite_data_tables(dom, min_rows=3, max_median_cell=80):
@@ -591,18 +663,7 @@ def rewrite_data_tables(dom, min_rows=3, max_median_cell=80):
                 continue
             if _is_calendar(data_grid):
                 continue                                 # blog-sidebar month calendar -> boilerplate
-            width = max(len(r) for r in data_rows)
-            lines, separated = [], False
-            for row, cells in zip(cell_rows, grid):
-                if len(row) < 2:                         # colspan section header -> its own line
-                    if cells and cells[0]:
-                        lines.append(cells[0])
-                    continue
-                lines.append(_pipe_row(cells + [""] * (width - len(cells))))
-                if not separated and all(c.tag == "th" for c in row):
-                    lines.append(" | ".join(["---"] * width))
-                    separated = True
-            text = "\n".join(lines)
+            text = _render_ragged_table(cell_rows, grid)
         if not text.strip():
             continue
         pre = table.makeelement("pre")
