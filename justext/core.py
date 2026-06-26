@@ -1862,7 +1862,7 @@ def _comment_author_meta(dom):
         if "pingback" in cls or "trackback" in cls:
             continue
         author = ""
-        for t in (c.xpath('.//*[contains(@class,"fn") or contains(@class,"comment-author-link")]//text()')
+        for t in (c.xpath('.//*[contains(@class,"fn") or contains(@class,"comment-author")]//text()')
                   + c.xpath('.//cite//text()')):
             t = re.sub(r"\s+", " ", t).strip()
             if t and not _NON_AUTHOR.match(t):
