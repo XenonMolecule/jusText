@@ -848,8 +848,12 @@ def stackexchange_paragraphs(dom, include_comments=True):
     never a scattered subset (a later comment builds on earlier ones). Costs ~0.001 F1 on
     general/dev. ``include_comments=False`` opts out for strict gold-matching benchmarking.
     """
+    # Require a StackExchange `.post-text` body, not just `<div id="question">`: the AnsPress
+    # WordPress Q&A plugin reuses `id="question"`/`id="answer-N"` and schema.org `itemprop="text"`
+    # but puts the answer in `.ap-answer-content`, so the handler emitted empty role markers and
+    # buried the real answer (housingforseniors, research log 0089). No `.post-text` -> fall through.
     questions = dom.xpath('//div[@id="question"]')
-    if not questions:
+    if not questions or not dom.xpath('//*[contains(@class,"post-text")]'):
         return None
     paragraphs = []
     title = dom.xpath('//*[contains(@class,"question-hyperlink")]//text()')
@@ -867,6 +871,7 @@ def stackexchange_paragraphs(dom, include_comments=True):
     posts = [("Question", questions[0], False)]
     posts += [("Answer", a, multi and "accepted-answer" in (a.get("class") or ""))
               for a in answers]
+    body_added = False
     for role, post, accepted in posts:
         author = _qa_author(post)
         marker = "**%s (%s)**" % (role, author) if author else "**%s**" % role
@@ -879,12 +884,18 @@ def stackexchange_paragraphs(dom, include_comments=True):
                 if body.text.strip():
                     body.class_type = "good"
                     paragraphs.append(body)
+                    body_added = True
         if include_comments:
             comments = _qa_comments(post)
             if comments:
                 lines = "\n".join(
                     ("- **%s:** %s" % (a, t) if a else "- " + t) for a, t in comments)
                 paragraphs.append(_marker_paragraph("**Comments**\n" + lines))
+    # A page with a `<div id="question">` but no StackExchange `.post-text`/`itemprop=text`
+    # body is some OTHER Q&A engine (e.g. the AnsPress WordPress plugin -- `.ap-answer-content`):
+    # emitting only empty role markers buried the real answer. Fall through to normal extraction.
+    if not body_added:
+        return None
     return paragraphs
 
 
