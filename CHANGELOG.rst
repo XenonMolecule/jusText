@@ -3,6 +3,22 @@
 Changelog for jusText
 =====================
 
+4.1.0 (2026-06-25)
+------------------
+LLM-distilled main-content extraction fork (``XenonMolecule/jusText``). Tuned against an
+LLM-distilled gold benchmark; validated on held-out dev/dev2/dev3 with a strict no-regression bar.
+
+- *FEATURE:* Recognizable-platform handlers that move the author/role to the front and strip
+  chrome: StackExchange, vBulletin, phpBB, SMF, bbPress, XenForo, JForum, Drupal forums, **Ask
+  MetaFilter**, **DSpace** repositories, and **CONTENTdm** digital libraries (OCR/metadata pulled
+  from the client-side ``__INITIAL_STATE__`` JSON).
+- *FEATURE:* Comment attribution for WordPress and **Movable Type** blog threads.
+- *BUG FIX:* Recover content lost to malformed HTML — concatenated documents and a **premature**
+  ``</html>`` **close** — via a self-correcting re-merge that never regresses well-formed pages.
+- *BUG FIX:* Words glued at inline ``<img>`` / block ``<address>`` boundaries; dangling UI-label
+  paragraphs ("By"/"Share"/"Read More"); CONTENTdm Private-Use-Area paragraph markers.
+- *PACKAGING:* Bundled classifier with fastText auto-download; pip-installable fork.
+
 3.0.2 (2025-02-25)
 ------------------
 - *BUG FIX:* Handle urllib imports in Python 2 and 3 correctly `#51 <https://github.com/miso-belica/jusText/pull/51>`_.

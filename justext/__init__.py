@@ -14,4 +14,4 @@ from .classifier import ParagraphClassifier
 from ._models import get_model, download_fasttext
 
 
-__version__ = "4.0.0"
+__version__ = "4.1.0"
