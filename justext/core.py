@@ -1739,22 +1739,51 @@ _LATEX_SRC = re.compile(
     r"(codecogs|mimetex|mathtex|/latex|cgi-bin/mat|imgtex|forkosh|/cgi-bin/mimetex)", re.I)
 
 
+# Greek letters and common math symbols -> unicode (the gold transcribes them, not drops them).
+_LATEX_SYMBOL = {
+    "alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "epsilon": "ε", "varepsilon": "ε",
+    "zeta": "ζ", "eta": "η", "theta": "θ", "vartheta": "θ", "iota": "ι", "kappa": "κ",
+    "lambda": "λ", "mu": "μ", "nu": "ν", "xi": "ξ", "pi": "π", "rho": "ρ", "sigma": "σ",
+    "tau": "τ", "upsilon": "υ", "phi": "φ", "varphi": "φ", "chi": "χ", "psi": "ψ", "omega": "ω",
+    "Gamma": "Γ", "Delta": "Δ", "Theta": "Θ", "Lambda": "Λ", "Xi": "Ξ", "Pi": "Π", "Sigma": "Σ",
+    "Phi": "Φ", "Psi": "Ψ", "Omega": "Ω", "infty": "∞", "times": "×", "cdot": "·", "pm": "±",
+    "leq": "≤", "le": "≤", "geq": "≥", "ge": "≥", "neq": "≠", "ne": "≠", "approx": "≈",
+    "equiv": "≡", "rightarrow": "→", "to": "→", "leftarrow": "←", "Rightarrow": "⇒",
+    "sum": "∑", "prod": "∏", "int": "∫", "partial": "∂", "nabla": "∇", "in": "∈", "notin": "∉",
+    "subset": "⊂", "subseteq": "⊆", "cup": "∪", "cap": "∩", "forall": "∀", "exists": "∃",
+    "ldots": "…", "dots": "…", "cdots": "…",
+}
+_SUPERSCRIPT = {"0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵",
+                "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", "n": "ⁿ", "i": "ⁱ"}
+
+
 def _latex_to_text(s):
     """Best-effort LaTeX -> readable plaintext (matches the gold's transcription style)."""
     if not s:
         return ""
     s = re.sub(r"^\$+|\$+$", "", s.strip()).strip()           # strip $...$ delimiters
+    # font/style wrappers carry no meaning: \operatorname{var} -> var, \mathrm{E} -> E, etc.
+    s = re.sub(r"\\(?:operatorname|mathrm|mathbf|mathit|mathsf|mathcal|mathbb|text|textrm|"
+               r"textbf|textit|boldsymbol|displaystyle)\s*\{([^{}]*)\}", r"\1", s)
     for _ in range(4):                                         # \frac variants -> a/(b)
         s = re.sub(r"\\d?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}", r"(\1)/(\2)", s)
         s = re.sub(r"\\d?frac\s*([0-9A-Za-z])\s*\{([^{}]*)\}", r"\1/(\2)", s)
         s = re.sub(r"\\d?frac\s*\{([^{}]*)\}\s*([0-9A-Za-z])", r"(\1)/\2", s)
         s = re.sub(r"\\d?frac\s*([0-9A-Za-z])\s*([0-9A-Za-z])", r"\1/\2", s)
     s = re.sub(r"\\sqrt\s*\{([^{}]*)\}", r"sqrt(\1)", s)
-    s = re.sub(r"\\left\s*([([{|])", r"\1", s)
-    s = re.sub(r"\\right\s*([)\]}|])", r"\1", s)
-    s = s.replace("\\cdot", "*").replace("\\times", "*").replace("\\pi", "pi")
+    s = re.sub(r"\\left\s*([([{|.])", r"\1", s).replace("\\left", "")
+    s = re.sub(r"\\right\s*([)\]}|.])", r"\1", s).replace("\\right", "")
+    # Greek letters & symbols (longest names first so \varepsilon beats \var...).
+    s = re.sub(r"\\([A-Za-z]+)",
+               lambda m: _LATEX_SYMBOL.get(m.group(1), "\\" + m.group(1)), s)
+    s = s.replace("\\,", " ").replace("\\;", " ").replace("\\:", " ").replace("\\!", "")
+    # superscripts: ^2 / ^{2} -> ²  (single digit/letter only)
+    s = re.sub(r"\^\s*\{?\s*([0-9ni])\s*\}?",
+               lambda m: _SUPERSCRIPT.get(m.group(1), "^" + m.group(1)), s)
     s = re.sub(r"\\[a-zA-Z]+", " ", s)                         # drop remaining \commands
-    s = re.sub(r"[{}]", " ", s)                                # drop braces
+    s = re.sub(r"[{}]", "", s)                                 # drop braces
+    s = re.sub(r"\(\s+", "(", s)                               # tighten "( x" -> "(x"
+    s = re.sub(r"\s+\)", ")", s)                               # tighten "x )" -> "x)"
     return re.sub(r"\s+", " ", s).strip()
 
 
@@ -1788,7 +1817,11 @@ def recover_latex_images(dom):
         from urllib import unquote
     for img in dom.xpath("//img[@src]"):
         src = img.get("src") or ""
-        if not _LATEX_SRC.search(src):
+        # Fire on a LaTeX-renderer host OR a MediaWiki/Wikia math image (class="tex", formula in
+        # alt) -- the latter covers Wikipedia/Wikia/every MediaWiki, where math is an <img> jusText
+        # would otherwise drop entirely (research log 0098).
+        css = (img.get("class") or "").split()
+        if not (_LATEX_SRC.search(src) or "tex" in css or "mwe-math-fallback-image-inline" in css):
             continue
         alt = img.get("alt")
         if alt is None:
