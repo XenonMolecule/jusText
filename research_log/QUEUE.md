@@ -231,6 +231,10 @@ calendar w/ &nbsp; empty cells, patents, Wikipedia Film table). Open gaps the us
   single-newlined (the colon→single-newline rule, but this may be a `<dl>`/`<p>` list, NOT a
   `<table>`, so rewrite_data_tables won't see it — extend the colon-collapse to dl/p runs).
 
+## #2 — Narrow ragged DATA-table handling — DONE (research log 0100)
+_Shipped: numeric-gated ragged path + calendar exclusion. atsdr/genomebiology pipe; forums/calendars excluded._
+
+### (original notes)
 ## #2 — Narrow ragged DATA-table handling (shipped 0099 reverted broad ragged)
 The uniform-width gate skips ragged tables. Two flavours of ragged table the gold DOES want piped:
 - **Multi-section** (atsdr docid=873 table-2): colspan section-header rows ("Organics"/"Inorganics")

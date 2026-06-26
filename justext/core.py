@@ -494,6 +494,41 @@ def _pipe_row(cells):
     return " | ".join(cells)
 
 
+# A cell is "numeric" if it has a digit and only digit/numeric-punctuation chars (no letters):
+# "201", "23,000", "0.997", "-", "B41J35/18" -> numeric/no; "Chloroform", "ND - 5" -> not numeric.
+_NUM_CELL = re.compile(r"^[\s\d.,%/+()\-–−±]*\d[\s\d.,%/+()\-–−±]*$")
+
+
+def _numeric_frac(grid):
+    "Fraction of non-empty cells that are purely numeric -- the signal of a real data table."
+    cells = [c for row in grid for c in row if c]
+    if not cells:
+        return 0.0
+    return sum(1 for c in cells if _NUM_CELL.match(c)) / len(cells)
+
+
+_DOW = {"m", "t", "w", "f", "s", "su", "mo", "tu", "we", "th", "fr", "sa", "mon", "tue", "wed",
+        "thu", "fri", "sat", "sun", "tues", "thur", "thurs", "weds", "sept"}
+
+
+def _is_calendar(grid):
+    """A month-calendar widget (blog sidebar boilerplate the gold drops). Two signals, the second
+    language-independent (day-of-week names vary by locale -- German ``M D M D F S S`` etc.):
+    a row of day-of-week names, or a ~7-wide grid that is mostly day-of-month integers (1-31)."""
+    for row in grid:
+        cells = [c.strip().lower() for c in row if c.strip()]
+        if len(cells) >= 5 and all(c in _DOW for c in cells):
+            return True
+    nums = [c.strip() for row in grid for c in row if c.strip()]
+    widths = [len(r) for r in grid if len(r) >= 2]
+    if nums and widths:
+        modal_w = max(set(widths), key=widths.count)
+        day_frac = sum(1 for c in nums if c.isdigit() and 1 <= int(c) <= 31) / len(nums)
+        if 5 <= modal_w <= 8 and day_frac >= 0.7:
+            return True
+    return False
+
+
 def rewrite_data_tables(dom, min_rows=3, max_median_cell=80):
     """In-place: render a uniform data table the gold would transcribe as markdown, or leave it.
 
@@ -520,28 +555,54 @@ def rewrite_data_tables(dom, min_rows=3, max_median_cell=80):
             continue
         rows = table.xpath("./tr | ./tbody/tr | ./thead/tr")
         cell_rows = [tr.xpath("./td | ./th") for tr in rows]
-        if (len(cell_rows) < min_rows or any(len(c) < 2 for c in cell_rows)
-                or len({len(c) for c in cell_rows}) != 1):
-            continue                                     # too few rows / ragged -> not a clean table
+        data_rows = [r for r in cell_rows if len(r) >= 2]   # >=2-cell rows are the actual data
+        if len(data_rows) < min_rows:
+            continue                                     # too few data rows -> not a table
         grid = [[_cell_text(c) for c in row] for row in cell_rows]
+        data_grid = [g for g, r in zip(grid, cell_rows) if len(r) >= 2]
         link_chars = sum(len(a.text_content()) for a in table.xpath(".//a"))
         if link_chars > 0.5 * max(1, len(table.text_content())):
             continue                                     # nav/link table
-        cell_lengths = sorted(len(c) for row in grid for c in row)
+        cell_lengths = sorted(len(c) for row in data_grid for c in row)
         if cell_lengths[len(cell_lengths) // 2] > max_median_cell:
             continue                                     # prose rows, not data cells
-        n_cells = sum(len(r) for r in grid)
-        if sum(1 for row in grid for c in row if not c) > 0.4 * n_cells:
+        n_cells = sum(len(r) for r in data_grid)
+        if sum(1 for row in data_grid for c in row if not c) > 0.4 * n_cells:
             continue                                     # mostly-empty -> form/layout table
-        width = len(grid[0])
-        if all(c.tag == "th" for c in cell_rows[0]):                     # data table with a header
-            body = [_pipe_row(row) for row in grid]
-            body.insert(1, " | ".join(["---"] * width))
-            text = "\n".join(body)
-        elif all(c.rstrip().endswith(":") for c in grid[0] if c.strip()):   # label-value table
-            text = "\n".join(" ".join(row) for row in grid)
+        uniform = len({len(r) for r in cell_rows}) == 1 and len(data_rows) == len(cell_rows)
+        if uniform:
+            width = len(grid[0])
+            if all(c.tag == "th" for c in cell_rows[0]):                 # data table with a header
+                body = [_pipe_row(row) for row in grid]
+                body.insert(1, " | ".join(["---"] * width))
+                text = "\n".join(body)
+            elif all(c.rstrip().endswith(":") for c in grid[0] if c.strip()):   # label-value table
+                text = "\n".join(" ".join(row) for row in grid)
+            else:
+                continue                                 # ambiguous -> leave to the normal path
         else:
-            continue                                     # ambiguous -> leave to the normal path
+            # Ragged table (multi-section / multi-level header). Only fire on a clearly-numeric data
+            # table with a <th> header -- numeric density cleanly separates atsdr/genomebiology
+            # (46-70% numeric) from forum layout tables (0% numeric), which a broad ragged rule
+            # ruined (research log 0099/0100). 1-cell colspan rows become section-label lines.
+            if not any(all(c.tag == "th" for c in row) for row in data_rows):
+                continue
+            if _numeric_frac(data_grid) < 0.3:
+                continue
+            if _is_calendar(data_grid):
+                continue                                 # blog-sidebar month calendar -> boilerplate
+            width = max(len(r) for r in data_rows)
+            lines, separated = [], False
+            for row, cells in zip(cell_rows, grid):
+                if len(row) < 2:                         # colspan section header -> its own line
+                    if cells and cells[0]:
+                        lines.append(cells[0])
+                    continue
+                lines.append(_pipe_row(cells + [""] * (width - len(cells))))
+                if not separated and all(c.tag == "th" for c in row):
+                    lines.append(" | ".join(["---"] * width))
+                    separated = True
+            text = "\n".join(lines)
         if not text.strip():
             continue
         pre = table.makeelement("pre")
