@@ -173,6 +173,21 @@ the fork generalizes well; modern JS frameworks are NOT a major failure mode.
   weatherbug/brighttalk (JS), several wordpress tag/author listing pages (queenslib, gonzotown —
   listing-page over/under-extraction). Triage in a later cycle.
 
+## JS-blob under-extraction — triaged NEGATIVE (2026-06-25)
+Hypothesis: the 203 dev3 `__INITIAL_STATE__`/state-blob docs are a systematic recoverable category
+(like CONTENTdm 0087). Triage says NO:
+- **JSON-LD `articleBody`**: only 17 dev3 docs have it (≥200 chars); 16 already score F1≥0.6 (a site
+  emitting articleBody almost always renders the DOM too, so it's redundant). Exactly 1 doc would
+  improve (dogtrickacademy forum 0.37→0.65, and it's mediocre). Building it risks regressing the 16
+  good docs. NOT WORTH IT.
+- **Long-link unwrap** (content-in-`<a>`, hqnetwork): recovers hqnetwork 0.00→0.79-1.00 but
+  regresses dev2 −0.0047 to −0.0061 at every word threshold (re-admits related/nav/directory link
+  blocks the gold drops). Net-negative recall lever, same wall as the 0079 threshold/heuristic
+  levers. NOT SHIPPED.
+- The genuinely-stuck JS-blob docs (~16, F1<0.5) use heterogeneous custom schemas (window.__,
+  bespoke application/json) — per-site one-offs, no shared key. Low ROI. CONTENTdm (0087) was the
+  one platform worth a handler because it had 4 docs + a stable `collectionAlias` signature.
+
 ## Methodology
 - When out of fix ideas: sample ~5 partial-F1 docs, look for a common error, fix it. This has
   repeatedly surfaced wins we'd deemed impossible (mojibake, spacing, br, emails).
