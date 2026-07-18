@@ -545,7 +545,9 @@ def _is_calendar(grid):
     widths = [len(r) for r in grid if len(r) >= 2]
     if nums and widths:
         modal_w = max(set(widths), key=widths.count)
-        day_frac = sum(1 for c in nums if c.isdigit() and 1 <= int(c) <= 31) / len(nums)
+        # isdecimal(), not isdigit(): isdigit() accepts compatibility digits ("¹", "①")
+        # that int() rejects with ValueError, killing the whole document.
+        day_frac = sum(1 for c in nums if c.isdecimal() and 1 <= int(c) <= 31) / len(nums)
         if 5 <= modal_w <= 8 and day_frac >= 0.7:
             return True
     return False
