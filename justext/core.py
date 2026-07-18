@@ -440,6 +440,18 @@ def _code_block_text(el):
     return re.sub(r"\n{3,}", "\n\n", text).strip("\n")
 
 
+# Characters lxml refuses in a text node (XML-illegal): C0 controls other than \t \n \r,
+# surrogates, and U+FFFE/U+FFFF. The HTML parser happily decodes e.g. ``&#1;`` in a cell
+# into U+0001, so text lifted out of the parsed DOM can contain them even though it can
+# never be assigned back (``pre.text = ...`` raises ValueError).
+_XML_ILLEGAL = re.compile(u"[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff\ufffe\uffff]")
+
+
+def _xml_safe(text):
+    "Strip XML-illegal characters so the text can be assigned to a text node."
+    return _XML_ILLEGAL.sub("", text)
+
+
 def rewrite_code_blocks(dom):
     """In-place: turn a multi-line ``<code>`` block into a verbatim ``<pre>``.
 
@@ -464,7 +476,7 @@ def rewrite_code_blocks(dom):
         if not text:
             continue
         pre = code.makeelement("pre")
-        pre.text = text
+        pre.text = _xml_safe(text)
         parent = code.getparent()
         if parent is not None:
             parent.replace(code, pre)
@@ -485,7 +497,7 @@ def rewrite_code_tables(dom):
         if not text:
             continue
         pre = table.makeelement("pre")
-        pre.text = text
+        pre.text = _xml_safe(text)
         parent = table.getparent()
         if parent is not None:
             parent.replace(table, pre)
@@ -679,7 +691,7 @@ def rewrite_data_tables(dom, min_rows=3, max_median_cell=80):
         if not text.strip():
             continue
         pre = table.makeelement("pre")
-        pre.text = text
+        pre.text = _xml_safe(text)
         parent = table.getparent()
         if parent is not None:
             parent.replace(table, pre)
