@@ -392,6 +392,17 @@ def preprocessor(dom):
         if el.tag in ("pre", "code") or el.xpath(".//pre | .//code"):
             continue
         _drop_keep_tail(el)
+    # A <form> nested inside a <button> (invalid HTML) crashes lxml_html_clean when the
+    # <button> is the document root (e.g. the input is a bare fragment): with forms=True the
+    # Cleaner kill-lists <button> and remove-lists <form>; a kill-listed *root* is rewritten
+    # to <div> and clear()ed, detaching its children, and drop_tag() on the now-parentless
+    # <form> hits `assert parent is not None`. The Cleaner deletes the whole <button> subtree
+    # anyway, so detaching the nested <form> first never changes output. (The real fix
+    # belongs in lxml_html_clean; this is a narrow workaround.)
+    for el in dom.xpath("//button//form"):
+        parent = el.getparent()
+        if parent is not None:
+            parent.remove(el)
     options = {
         "processing_instructions": False,
         "remove_unknown_tags": False,
