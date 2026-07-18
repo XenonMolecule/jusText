@@ -15,6 +15,7 @@ Design goals (per research log 0003):
 
 import math
 import re
+import zlib
 
 from .core import define_stoplist
 
@@ -100,6 +101,36 @@ def paragraph_features(paragraphs, stoplist):
         rows.append(f + [prev[0], prev[2], prev[3], prev[10],
                          nxt[0], nxt[2], nxt[3], nxt[10]])
     return rows, kept
+
+
+# _dedup_kept switches from the exact all-pairs scan to the LSH candidate index above this
+# many dedup-eligible paragraphs. Typical pages have well under 100, so the exact
+# (benchmark-validated) path still handles them; the LSH path exists for the huge
+# comment/forum pages where all-pairs fuzz.partial_ratio is quadratic and hangs.
+DEDUP_LSH_THRESHOLD = 300
+_SHINGLE_W = 5       # char-shingle width
+_SAMPLE_MOD = 4      # keep shingle hashes where h % _SAMPLE_MOD == 0 (~25%)
+_MIN_FINGERPRINT = 6  # always keep at least the k smallest hashes (short texts)
+_LSH_BUCKET_CAP = 64  # a hash shared this widely discriminates nothing -- stop indexing it
+_LSH_MAX_VERIFY = 25  # fuzz-verify at most this many top-voted candidates
+
+
+def _shingle_fingerprint(text):
+    """Deterministic sample of the text's char-shingle hashes (its LSH fingerprint).
+
+    The same shingle hashes identically everywhere, so two near-duplicate paragraphs
+    sample to overlapping fingerprints, and a paragraph contained in a longer one samples
+    to a subset of the container's -- which is what lets the inverted index nominate both
+    kinds of duplicate without comparing all pairs. The ``min(...)`` floor keeps the
+    fingerprint non-empty for texts too short to have many sampled shingles.
+    """
+    if len(text) < _SHINGLE_W:
+        return {zlib.crc32(text.encode("utf-8"))}
+    hashes = {zlib.crc32(text[i:i + _SHINGLE_W].encode("utf-8"))
+              for i in range(len(text) - _SHINGLE_W + 1)}
+    fingerprint = {h for h in hashes if h % _SAMPLE_MOD == 0}
+    fingerprint.update(sorted(hashes)[:_MIN_FINGERPRINT])
+    return fingerprint
 
 
 class ParagraphClassifier:
@@ -201,6 +232,13 @@ class ParagraphClassifier:
         Dedup targets repeated PROSE (forum quotes, teasers). Code/data lines are skipped --
         they have near-zero stopword density and legitimately repeat (two SQL examples can
         share a first line; loops repeat), so deduping them breaks code (research log 0044).
+
+        Documents with more than ``DEDUP_LSH_THRESHOLD`` dedup-eligible paragraphs switch
+        from the exact all-pairs scan (quadratic in paragraphs -- ``partial_ratio`` against
+        every earlier longer paragraph hangs huge comment/forum pages) to an LSH candidate
+        index: sampled char-shingle fingerprints nominate a bounded number of likely
+        matches, and the SAME verification decides. Below the threshold the exact scan is
+        unchanged, so benchmark-validated behavior on normal pages is untouched.
         """
         from rapidfuzz import fuzz  # lazy
 
@@ -212,7 +250,17 @@ class ParagraphClassifier:
                 text = text.replace(q, '"')
             return text.replace("�", "")
 
-        seen = []
+        def is_dup(n, s):
+            # score_cutoff lets rapidfuzz reject cheap cases (e.g. length gap) early
+            # without changing any >= threshold decision.
+            if n == s or fuzz.ratio(n, s, score_cutoff=97) >= 97:
+                return True
+            # containment: a long paragraph that is a near-exact substring of an
+            # earlier, longer kept one (a repeated teaser/excerpt).
+            return (len(n) >= 40 and len(s) > len(n)
+                    and fuzz.partial_ratio(n, s, score_cutoff=98) >= 98)
+
+        entries = []
         for p in paragraphs:
             if p.class_type != "good":
                 continue
@@ -228,17 +276,44 @@ class ParagraphClassifier:
             n = norm(p.text)
             if len(n) < 12:  # keep short lines (could be distinct labels/headers)
                 continue
-            dup = False
-            for s in seen:
-                if n == s or fuzz.ratio(n, s) >= 97:
-                    dup = True
-                    break
-                # containment: a long paragraph that is a near-exact substring of an
-                # earlier, longer kept one (a repeated teaser/excerpt).
-                if len(n) >= 40 and len(s) > len(n) and fuzz.partial_ratio(n, s) >= 98:
-                    dup = True
-                    break
-            if dup:
+            entries.append((p, n))
+
+        if len(entries) <= DEDUP_LSH_THRESHOLD:
+            seen = []
+            for p, n in entries:
+                if any(is_dup(n, s) for s in seen):
+                    p.class_type = "bad"
+                else:
+                    seen.append(n)
+            return
+
+        # LSH path. Candidate generation is an inverted index over each paragraph's
+        # fingerprint (a deterministic sample of its char-shingle hashes). A near-duplicate
+        # shares most shingles with its original, and a *contained* paragraph's shingles
+        # are a subset of its container's, so both surface as candidates through shared
+        # sampled hashes. Buckets are capped (a shingle shared by 60+ paragraphs -- " the "
+        # etc. -- discriminates nothing) and only the top-voted candidates are verified,
+        # so total work stays near-linear.
+        seen_texts = []   # unique normalized texts, in document order
+        seen_exact = set()
+        index = {}        # shingle hash -> ids of seen paragraphs (capped)
+        for p, n in entries:
+            if n in seen_exact:
                 p.class_type = "bad"
-            else:
-                seen.append(n)
+                continue
+            fingerprint = _shingle_fingerprint(n)
+            votes = {}
+            for h in fingerprint:
+                for sid in index.get(h, ()):
+                    votes[sid] = votes.get(sid, 0) + 1
+            candidates = sorted(votes, key=lambda sid: (-votes[sid], sid))
+            if any(is_dup(n, seen_texts[sid]) for sid in candidates[:_LSH_MAX_VERIFY]):
+                p.class_type = "bad"
+                continue
+            sid = len(seen_texts)
+            seen_texts.append(n)
+            seen_exact.add(n)
+            for h in fingerprint:
+                bucket = index.setdefault(h, [])
+                if len(bucket) < _LSH_BUCKET_CAP:
+                    bucket.append(sid)
